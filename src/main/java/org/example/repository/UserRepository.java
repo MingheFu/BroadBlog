@@ -1,8 +1,15 @@
 package org.example.repository;
 
-import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.Optional;
+
 import org.example.User;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface UserRepository extends JpaRepository<User, Long> {
     // You can add custom query methods here if needed
-} 
+    // List<Comment> findByPostId(Long postId);
+    //List<Comment> findByAuthorId(Long authorId);
+    Optional<User> findByUsername(String username);
+    Optional<User> findByEmail(String email);
+}
+ 
