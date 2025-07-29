@@ -1,0 +1,73 @@
+package org.example.dto;
+
+import java.util.List;
+
+public class UserDTO {
+    private Long id;
+    private String username;
+    private String email;
+    private String bio;
+    private String avatar;
+    private List<String> roles;
+
+    // 默认构造函数
+    public UserDTO() {}
+
+    // 构造函数
+    public UserDTO(Long id, String username, String email, String bio, String avatar) {
+        this.id = id;
+        this.username = username;
+        this.email = email;
+        this.bio = bio;
+        this.avatar = avatar;
+    }
+
+    // Getters and Setters
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getBio() {
+        return bio;
+    }
+
+    public void setBio(String bio) {
+        this.bio = bio;
+    }
+
+    public String getAvatar() {
+        return avatar;
+    }
+
+    public void setAvatar(String avatar) {
+        this.avatar = avatar;
+    }
+
+    public List<String> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(List<String> roles) {
+        this.roles = roles;
+    }
+} 

@@ -3,8 +3,8 @@ package org.example.service;
 import java.util.List;
 import java.util.Optional;
 
-import org.example.Post;
-import org.example.User;
+import org.example.entity.Post;
+import org.example.entity.User;
 import org.example.repository.PostRepository;
 import org.example.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
