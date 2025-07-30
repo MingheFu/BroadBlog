@@ -9,6 +9,7 @@ import org.example.entity.User;
 import org.example.mapper.UserMapper;
 import org.example.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,10 +35,16 @@ public class UserController {
 
     // 用户注册
     @PostMapping("/register")
-    public ResponseEntity<UserDTO> registerUser(@RequestBody UserDTO userDTO) {
-        User user = userMapper.toEntity(userDTO);
-        User savedUser = userService.registerUser(user);
-        return ResponseEntity.ok(userMapper.toDTO(savedUser));
+    public ResponseEntity<?> registerUser(@RequestBody UserDTO userDTO) {
+        try {
+            User user = userMapper.toEntity(userDTO);
+            User savedUser = userService.registerUser(user);
+            return ResponseEntity.ok(userMapper.toDTO(savedUser));
+        } catch (RuntimeException e) {
+            // 处理用户名或邮箱一存在
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body("{\"error\": \"" + e.getMessage() + "\"}");
+        }
     }
 
     // 获取所有用户
