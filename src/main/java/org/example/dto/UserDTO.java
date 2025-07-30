@@ -6,6 +6,7 @@ public class UserDTO {
     private Long id;
     private String username;
     private String email;
+    private String password;  // 添加密码字段
     private String bio;
     private String avatar;
     private List<String> roles;
@@ -45,6 +46,14 @@ public class UserDTO {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     public String getBio() {
