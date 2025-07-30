@@ -2,6 +2,8 @@ package com.broadblog.mapper;
 
 import com.broadblog.dto.CommentDTO;
 import com.broadblog.entity.Comment;
+import com.broadblog.entity.User;
+import com.broadblog.entity.Post;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -33,8 +35,19 @@ public class CommentMapper {
         comment.setCreatedAt(dto.getCreatedAt());
         comment.setUpdatedAt(dto.getUpdatedAt());
         
-        // Note: author and post relationships should be set in service layer
-        // to ensure they are managed entities
+        // Set author relationship
+        if (dto.getAuthorId() != null) {
+            User author = new User();
+            author.setId(dto.getAuthorId());
+            comment.setAuthor(author);
+        }
+        
+        // Set post relationship
+        if (dto.getPostId() != null) {
+            Post post = new Post();
+            post.setId(dto.getPostId());
+            comment.setPost(post);
+        }
         
         return comment;
     }

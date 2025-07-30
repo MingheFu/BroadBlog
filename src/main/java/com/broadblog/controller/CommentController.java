@@ -35,7 +35,7 @@ public class CommentController {
     }
     
     @PostMapping
-    public ResponseEntity<CommentDTO> createComment(@RequestBody CommentDTO commentDTO) {
+    public ResponseEntity<?> createComment(@RequestBody CommentDTO commentDTO) {
         try {
             Comment comment = commentMapper.toEntity(commentDTO);
             comment.setCreatedAt(LocalDateTime.now());
@@ -44,7 +44,7 @@ public class CommentController {
             return ResponseEntity.ok(commentMapper.toDTO(savedComment));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(null);
+                .body("{\"error\": \"" + e.getMessage() + "\"}");
         }
     }
     
