@@ -12,8 +12,10 @@
     </parent>
 
     <groupId>org.example</groupId>
-    <artifactId>simple_spring</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <artifactId>broadblog</artifactId>
+    <version>1.0.0</version>
+    <name>BroadBlog</name>
+    <description>A comprehensive blog application</description>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
