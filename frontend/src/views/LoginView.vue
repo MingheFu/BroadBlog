@@ -3,7 +3,7 @@
     <el-card class="login-card" shadow="hover">
       <template #header>
         <div class="card-header">
-          <h2>登录</h2>
+          <h2>Login</h2>
         </div>
       </template>
       
@@ -14,19 +14,19 @@
         label-width="80px"
         @submit.prevent="handleLogin"
       >
-        <el-form-item label="用户名" prop="username">
+        <el-form-item label="Username" prop="username">
           <el-input
             v-model="loginForm.username"
-            placeholder="请输入用户名"
+            placeholder="Enter Username"
             prefix-icon="User"
           />
         </el-form-item>
         
-        <el-form-item label="密码" prop="password">
+        <el-form-item label="Password" prop="password">
           <el-input
             v-model="loginForm.password"
             type="password"
-            placeholder="请输入密码"
+            placeholder="Enter Password"
             prefix-icon="Lock"
             show-password
           />
@@ -39,7 +39,7 @@
             @click="handleLogin"
             style="width: 100%"
           >
-            登录
+            Login
           </el-button>
         </el-form-item>
         
@@ -49,7 +49,7 @@
             @click="showRegister = true"
             style="width: 100%"
           >
-            还没有账号？点击注册
+            No account? Sign up now
           </el-button>
         </el-form-item>
       </el-form>
@@ -58,7 +58,7 @@
     <!-- Register Dialog -->
     <el-dialog
       v-model="showRegister"
-      title="注册"
+      title="Register"
       width="400px"
     >
       <el-form
@@ -67,34 +67,34 @@
         :rules="registerRules"
         label-width="80px"
       >
-        <el-form-item label="用户名" prop="username">
+        <el-form-item label="Username" prop="username">
           <el-input
             v-model="registerForm.username"
-            placeholder="请输入用户名"
+            placeholder="Enter username"
           />
         </el-form-item>
         
-        <el-form-item label="邮箱" prop="email">
+        <el-form-item label="Email" prop="email">
           <el-input
             v-model="registerForm.email"
-            placeholder="请输入邮箱"
+            placeholder="Enter email"
           />
         </el-form-item>
         
-        <el-form-item label="密码" prop="password">
+        <el-form-item label="Password" prop="password">
           <el-input
             v-model="registerForm.password"
             type="password"
-            placeholder="请输入密码"
+            placeholder="Enter Password"
             show-password
           />
         </el-form-item>
         
-        <el-form-item label="确认密码" prop="confirmPassword">
+        <el-form-item label="Confirm Password" prop="confirmPassword">
           <el-input
             v-model="registerForm.confirmPassword"
             type="password"
-            placeholder="请确认密码"
+            placeholder="Confirm password"
             show-password
           />
         </el-form-item>
@@ -102,13 +102,13 @@
       
       <template #footer>
         <span class="dialog-footer">
-          <el-button @click="showRegister = false">取消</el-button>
+          <el-button @click="showRegister = false">Cancel</el-button>
           <el-button
             type="primary"
             :loading="registerLoading"
             @click="handleRegister"
           >
-            注册
+            Register
           </el-button>
         </span>
       </template>
@@ -145,31 +145,31 @@ const registerForm = reactive({
 
 const rules = {
   username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' }
+    { required: true, message: 'Please enter username', trigger: 'blur' }
   ],
   password: [
-    { required: true, message: '请输入密码', trigger: 'blur' }
+    { required: true, message: 'Please enter password', trigger: 'blur' }
   ]
 }
 
 const registerRules = {
   username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' }
+    { required: true, message: 'Please enter username', trigger: 'blur' }
   ],
   email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }
+    { required: true, message: 'Please enter email', trigger: 'blur' },
+    { type: 'email', message: 'Please enter valid email format', trigger: 'blur' }
   ],
   password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码长度至少6位', trigger: 'blur' }
+    { required: true, message: 'Please enter password', trigger: 'blur' },
+    { min: 6, message: 'Password must be at least 6 characters', trigger: 'blur' }
   ],
   confirmPassword: [
-    { required: true, message: '请确认密码', trigger: 'blur' },
+    { required: true, message: 'Please confirm password', trigger: 'blur' },
     {
       validator: (rule: any, value: string, callback: Function) => {
         if (value !== registerForm.password) {
-          callback(new Error('两次输入的密码不一致'))
+          callback(new Error('Passwords do not match'))
         } else {
           callback()
         }
@@ -187,10 +187,10 @@ const handleLogin = async () => {
     loading.value = true
     
     await userStore.login(loginForm.username, loginForm.password)
-    ElMessage.success('登录成功')
+    ElMessage.success('Login successful')
     router.push('/')
   } catch (error: any) {
-    ElMessage.error(error.response?.data?.message || '登录失败')
+    ElMessage.error(error.response?.data?.message || 'Login failed')
   } finally {
     loading.value = false
   }
@@ -208,11 +208,11 @@ const handleRegister = async () => {
       registerForm.password,
       registerForm.email
     )
-    ElMessage.success('注册成功')
+    ElMessage.success('Registration successful')
     showRegister.value = false
     router.push('/')
   } catch (error: any) {
-    ElMessage.error(error.response?.data?.message || '注册失败')
+    ElMessage.error(error.response?.data?.message || 'Registration failed')
   } finally {
     registerLoading.value = false
   }

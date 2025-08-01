@@ -3,10 +3,10 @@
     <el-container>
       <el-header class="header">
         <div class="header-content">
-          <h2>文章管理</h2>
+          <h2>Post Management</h2>
           <el-button type="primary" @click="showCreateDialog = true">
             <el-icon><Plus /></el-icon>
-            新建文章
+            New Post
           </el-button>
         </div>
       </el-header>
@@ -16,7 +16,7 @@
         <el-card class="search-card">
           <el-input
             v-model="searchKeyword"
-            placeholder="搜索文章标题..."
+            placeholder="Search post title..."
             prefix-icon="Search"
             clearable
             @input="handleSearch"
@@ -32,32 +32,32 @@
             style="width: 100%"
           >
             <el-table-column prop="id" label="ID" width="80" />
-            <el-table-column prop="title" label="标题" min-width="200" />
-            <el-table-column prop="author.username" label="作者" width="120" />
-            <el-table-column prop="createdAt" label="创建时间" width="180">
+            <el-table-column prop="title" label="Title" min-width="200" />
+            <el-table-column prop="author.username" label="Author" width="120" />
+            <el-table-column prop="createdAt" label="Created At" width="180">
               <template #default="scope">
                 {{ formatDate(scope.row.createdAt) }}
               </template>
             </el-table-column>
-            <el-table-column prop="updatedAt" label="更新时间" width="180">
+            <el-table-column prop="updatedAt" label="Updated At" width="180">
               <template #default="scope">
                 {{ formatDate(scope.row.updatedAt) }}
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="200" fixed="right">
+            <el-table-column label="Actions" width="200" fixed="right">
               <template #default="scope">
                 <el-button
                   size="small"
                   @click="handleEdit(scope.row)"
                 >
-                  编辑
+                  Edit
                 </el-button>
                 <el-button
                   size="small"
                   type="danger"
                   @click="handleDelete(scope.row)"
                 >
-                  删除
+                  Delete
                 </el-button>
               </template>
             </el-table-column>
@@ -69,7 +69,7 @@
     <!-- Create/Edit Dialog -->
     <el-dialog
       v-model="showCreateDialog"
-      :title="isEditing ? '编辑文章' : '新建文章'"
+      :title="isEditing ? 'Edit Post' : 'New Post'"
       width="800px"
     >
       <el-form
@@ -78,32 +78,32 @@
         :rules="postRules"
         label-width="80px"
       >
-        <el-form-item label="标题" prop="title">
+        <el-form-item label="Title" prop="title">
           <el-input
             v-model="postForm.title"
-            placeholder="请输入文章标题"
+            placeholder="Enter post title"
           />
         </el-form-item>
         
-        <el-form-item label="内容" prop="content">
+        <el-form-item label="Content" prop="content">
           <el-input
             v-model="postForm.content"
             type="textarea"
             :rows="10"
-            placeholder="请输入文章内容"
+            placeholder="Enter post content"
           />
         </el-form-item>
       </el-form>
       
       <template #footer>
         <span class="dialog-footer">
-          <el-button @click="showCreateDialog = false">取消</el-button>
+          <el-button @click="showCreateDialog = false">Cancel</el-button>
           <el-button
             type="primary"
             :loading="submitLoading"
             @click="handleSubmit"
           >
-            {{ isEditing ? '更新' : '创建' }}
+            {{ isEditing ? 'Update' : 'Create' }}
           </el-button>
         </span>
       </template>
@@ -144,10 +144,10 @@ const postForm = reactive({
 
 const postRules = {
   title: [
-    { required: true, message: '请输入文章标题', trigger: 'blur' }
+    { required: true, message: 'Please enter post title', trigger: 'blur' }
   ],
   content: [
-    { required: true, message: '请输入文章内容', trigger: 'blur' }
+    { required: true, message: 'Please enter post content', trigger: 'blur' }
   ]
 }
 
@@ -168,7 +168,7 @@ const loadPosts = async () => {
     const response = await api.get('/posts')
     posts.value = response.data
   } catch (error: any) {
-    ElMessage.error('加载文章失败')
+    ElMessage.error('Failed to load posts')
   } finally {
     loading.value = false
   }
@@ -189,21 +189,21 @@ const handleEdit = (post: Post) => {
 const handleDelete = async (post: Post) => {
   try {
     await ElMessageBox.confirm(
-      `确定要删除文章 "${post.title}" 吗？`,
-      '确认删除',
+      `Are you sure you want to delete post "${post.title}"?`,
+      'Confirm Delete',
       {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
+        confirmButtonText: 'Confirm',
+        cancelButtonText: 'Cancel',
         type: 'warning'
       }
     )
     
     await api.delete(`/posts/${post.id}`)
-    ElMessage.success('删除成功')
+    ElMessage.success('Deleted successfully')
     await loadPosts()
   } catch (error: any) {
     if (error !== 'cancel') {
-      ElMessage.error('删除失败')
+      ElMessage.error('Delete failed')
     }
   }
 }
@@ -217,17 +217,17 @@ const handleSubmit = async () => {
     
     if (isEditing.value && currentPostId.value) {
       await api.put(`/posts/${currentPostId.value}`, postForm)
-      ElMessage.success('更新成功')
+      ElMessage.success('Updated successfully')
     } else {
       await api.post('/posts', postForm)
-      ElMessage.success('创建成功')
+      ElMessage.success('Created successfully')
     }
     
     showCreateDialog.value = false
     resetForm()
     await loadPosts()
   } catch (error: any) {
-    ElMessage.error(error.response?.data?.message || '操作失败')
+    ElMessage.error(error.response?.data?.message || 'Operation failed')
   } finally {
     submitLoading.value = false
   }
@@ -241,7 +241,7 @@ const resetForm = () => {
 }
 
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleString('zh-CN')
+  return new Date(dateString).toLocaleString('en-US')
 }
 
 onMounted(() => {

@@ -32,12 +32,12 @@ const handleSelect = (key: string) => {
 const handleCommand = (command: string) => {
   switch (command) {
     case 'profile':
-      ElMessage.info('个人资料功能开发中...')
+      ElMessage.info('Profile feature is under development...')
       break
     case 'logout':
       userStore.logout()
       router.push('/login')
-      ElMessage.success('已退出登录')
+      ElMessage.success('Logged out successfully')
       break
   }
 }
@@ -64,21 +64,21 @@ onMounted(() => {
               :default-active="activeIndex"
               @select="handleSelect"
             >
-              <el-menu-item index="posts">文章管理</el-menu-item>
-              <el-menu-item index="users">用户管理</el-menu-item>
-              <el-menu-item index="comments">评论管理</el-menu-item>
+              <el-menu-item index="posts">Post Management</el-menu-item>
+              <el-menu-item index="users">User Management</el-menu-item>
+              <el-menu-item index="comments">Comment Management</el-menu-item>
             </el-menu>
           </div>
           <div class="user-info">
             <el-dropdown @command="handleCommand">
               <span class="user-dropdown">
-                {{ userStore.user?.username || '用户' }}
+                {{ userStore.user?.username || 'User' }}
                 <el-icon><ArrowDown /></el-icon>
               </span>
               <template #dropdown>
                 <el-dropdown-menu>
-                  <el-dropdown-item command="profile">个人资料</el-dropdown-item>
-                  <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
+                  <el-dropdown-item command="profile">Profile</el-dropdown-item>
+                  <el-dropdown-item command="logout" divided>Logout</el-dropdown-item>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
@@ -91,12 +91,12 @@ onMounted(() => {
           <el-card>
             <template #header>
               <div class="welcome-header">
-                <h3>欢迎使用 BroadBlog 管理系统</h3>
+                <h3>Welcome to BroadBlog Management System</h3>
               </div>
             </template>
             <div class="welcome-content">
-              <p>这是一个基于 Spring Boot + Vue.js 的全栈博客管理系统</p>
-              <p>您可以在这里管理文章、用户和评论</p>
+              <p>This is a full-stack blog management system based on Spring Boot + Vue.js</p>
+              <p>You can manage posts, users, and comments here</p>
             </div>
           </el-card>
         </div>
@@ -111,7 +111,7 @@ onMounted(() => {
                   </div>
                   <div class="stat-info">
                     <div class="stat-number">{{ stats.posts }}</div>
-                    <div class="stat-label">文章总数</div>
+                    <div class="stat-label">Total Posts</div>
                   </div>
                 </div>
               </el-card>
@@ -124,7 +124,7 @@ onMounted(() => {
                   </div>
                   <div class="stat-info">
                     <div class="stat-number">{{ stats.users }}</div>
-                    <div class="stat-label">用户总数</div>
+                    <div class="stat-label">Total Users</div>
                   </div>
                 </div>
               </el-card>
@@ -137,7 +137,7 @@ onMounted(() => {
                   </div>
                   <div class="stat-info">
                     <div class="stat-number">{{ stats.comments }}</div>
-                    <div class="stat-label">评论总数</div>
+                    <div class="stat-label">Total Comments</div>
                   </div>
                 </div>
               </el-card>
