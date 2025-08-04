@@ -2,17 +2,18 @@ package com.broadblog.service;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
 
 import com.broadblog.entity.Post;
 import com.broadblog.entity.User;
 import com.broadblog.repository.PostRepository;
 import com.broadblog.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 
 @Service
 public class PostService {
@@ -59,8 +60,63 @@ public class PostService {
     }
 
     public Page<Post> getPostsByPage(int page, int size) {
-        Pageable pageable = PageRequest.of(page - 1, size); // page从0开始
+        // 验证分页参数
+        if (page < 1) page = 1;
+        if (size < 1 || size > 100) size = 10;
+        
+        // 按创建时间倒序排列
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         return postRepository.findAll(pageable);
+    }
+    // 根据用户ID分页获取帖子
+    public Page<Post> getPostsByAuthorIdWithPage(Long authorId, int page, int size) {
+        if (page < 1) page = 1;
+        if (size < 1 || size > 100) size = 10;
+        
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        return postRepository.findByAuthorId(authorId, pageable);
+    }
+    
+    // 搜索帖子（综合搜索：标题、内容、标签）
+    public Page<Post> searchPosts(String keyword, int page, int size) {
+        if (page < 1) page = 1;
+        if (size < 1 || size > 100) size = 10;
+        
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        
+        // 如果关键词为空，返回所有帖子
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return postRepository.findAll(pageable);
+        }
+        
+        return postRepository.searchPosts(keyword.trim(), pageable);
+    }
+    
+    // 按标题搜索
+    public Page<Post> searchByTitle(String title, int page, int size) {
+        if (page < 1) page = 1;
+        if (size < 1 || size > 100) size = 10;
+        
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        return postRepository.findByTitleContainingIgnoreCase(title, pageable);
+    }
+    
+    // 按内容搜索
+    public Page<Post> searchByContent(String content, int page, int size) {
+        if (page < 1) page = 1;
+        if (size < 1 || size > 100) size = 10;
+        
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        return postRepository.findByContentContainingIgnoreCase(content, pageable);
+    }
+    
+    // 按标签搜索
+    public Page<Post> searchByTag(String tagName, int page, int size) {
+        if (page < 1) page = 1;
+        if (size < 1 || size > 100) size = 10;
+        
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        return postRepository.findByTagsNameContaining(tagName, pageable);
     }
 
 }

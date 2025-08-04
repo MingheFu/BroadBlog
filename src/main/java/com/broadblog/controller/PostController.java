@@ -1,18 +1,17 @@
 package com.broadblog.controller;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.Map;
-import java.util.HashMap;
 
-import com.broadblog.dto.PostDTO;
-import com.broadblog.entity.Post;
-import com.broadblog.mapper.PostMapper;
-import com.broadblog.service.PostService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,9 +19,14 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.data.domain.Page;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.broadblog.dto.PostDTO;
+import com.broadblog.entity.Post;
+import com.broadblog.mapper.PostMapper;
+import com.broadblog.security.CustomUserDetails;
+import com.broadblog.service.PostService;
 
 
 @RestController
@@ -37,15 +41,40 @@ public class PostController {
         this.postService = postService;
         this.postMapper = postMapper;
     }
+    
+    // 辅助方法：获取当前登录用户
+    private Long getCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof CustomUserDetails) {
+            CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+            return userDetails.getUser().getId();
+        }
+        throw new RuntimeException("User not authenticated");
+    }
 
     // Create a new post
     @PostMapping
     public ResponseEntity<PostDTO> createPost(@RequestBody PostDTO postDTO) {
-        Post post = postMapper.toEntity(postDTO);
-        post.setCreatedAt(LocalDateTime.now());
-        post.setUpdatedAt(LocalDateTime.now());
-        Post savedPost = postService.savePost(post);
-        return ResponseEntity.ok(postMapper.toDTO(savedPost));
+        try {
+            // 获取当前登录用户ID
+            Long currentUserId = getCurrentUserId();
+            
+            // 创建帖子并设置作者为当前用户
+            Post post = postMapper.toEntity(postDTO);
+            post.setCreatedAt(LocalDateTime.now());
+            post.setUpdatedAt(LocalDateTime.now());
+            
+            // 强制设置作者为当前登录用户，忽略前端传入的 authorId
+            postDTO.setAuthorId(currentUserId);
+            post = postMapper.toEntity(postDTO);
+            post.setCreatedAt(LocalDateTime.now());
+            post.setUpdatedAt(LocalDateTime.now());
+            
+            Post savedPost = postService.savePost(post);
+            return ResponseEntity.ok(postMapper.toDTO(savedPost));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     // Get all posts
@@ -69,36 +98,216 @@ public class PostController {
     // Update a post
     @PutMapping("/{id}")
     public ResponseEntity<PostDTO> updatePost(@PathVariable Long id, @RequestBody PostDTO postDTO) {
-        Optional<Post> optionalPost = postService.getPostById(id);
-        if (optionalPost.isEmpty()) {
-            return ResponseEntity.notFound().build();
+        try {
+            // 获取当前登录用户ID
+            Long currentUserId = getCurrentUserId();
+            
+            Optional<Post> optionalPost = postService.getPostById(id);
+            if (optionalPost.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            Post post = optionalPost.get();
+            
+            // 权限验证：只能编辑自己的帖子
+            if (!post.getAuthor().getId().equals(currentUserId)) {
+                return ResponseEntity.status(403).build(); // 403 Forbidden
+            }
+            
+            // 更新帖子内容
+            post.setTitle(postDTO.getTitle());
+            post.setContent(postDTO.getContent());
+            post.setUpdatedAt(LocalDateTime.now());
+            
+            Post updatedPost = postService.savePost(post);
+            return ResponseEntity.ok(postMapper.toDTO(updatedPost));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
         }
-        Post post = optionalPost.get();
-        post.setTitle(postDTO.getTitle());
-        post.setContent(postDTO.getContent());
-        post.setUpdatedAt(LocalDateTime.now());
-        Post updatedPost = postService.savePost(post);
-        return ResponseEntity.ok(postMapper.toDTO(updatedPost));
     }
 
     // Delete a post
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletePost(@PathVariable Long id) {
-        postService.deletePost(id);
-        return ResponseEntity.noContent().build();
+        try {
+            // 获取当前登录用户ID
+            Long currentUserId = getCurrentUserId();
+            
+            Optional<Post> optionalPost = postService.getPostById(id);
+            if (optionalPost.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            Post post = optionalPost.get();
+            
+            // 权限验证：只能删除自己的帖子
+            if (!post.getAuthor().getId().equals(currentUserId)) {
+                return ResponseEntity.status(403).build(); // 403 Forbidden
+            }
+            
+            postService.deletePost(id);
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
-    @GetMapping("/posts")
+    // 分页获取所有帖子
+    @GetMapping("/page")
     public ResponseEntity<Map<String, Object>> getPostsByPage(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
         Page<Post> pagePosts = postService.getPostsByPage(page, size);
+        
+        // 转换为 DTO
+        List<PostDTO> postDTOs = pagePosts.getContent().stream()
+            .map(postMapper::toDTO)
+            .collect(Collectors.toList());
+        
         Map<String, Object> result = new HashMap<>();
-        result.put("data", pagePosts.getContent());
-        result.put("page", page);
-        result.put("size", size);
-        result.put("total", pagePosts.getTotalElements());
+        result.put("data", postDTOs);
+        result.put("currentPage", page);
+        result.put("pageSize", size);
+        result.put("totalElements", pagePosts.getTotalElements());
+        result.put("totalPages", pagePosts.getTotalPages());
+        result.put("first", pagePosts.isFirst());
+        result.put("last", pagePosts.isLast());
+        
+        return ResponseEntity.ok(result);
+    }
+    
+    // 分页获取指定用户的帖子
+    @GetMapping("/author/{authorId}/page")
+    public ResponseEntity<Map<String, Object>> getPostsByAuthorWithPage(
+            @PathVariable Long authorId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Page<Post> pagePosts = postService.getPostsByAuthorIdWithPage(authorId, page, size);
+        
+        // 转换为 DTO
+        List<PostDTO> postDTOs = pagePosts.getContent().stream()
+            .map(postMapper::toDTO)
+            .collect(Collectors.toList());
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("data", postDTOs);
+        result.put("currentPage", page);
+        result.put("pageSize", size);
+        result.put("totalElements", pagePosts.getTotalElements());
+        result.put("totalPages", pagePosts.getTotalPages());
+        result.put("first", pagePosts.isFirst());
+        result.put("last", pagePosts.isLast());
+        result.put("authorId", authorId);
+        
+        return ResponseEntity.ok(result);
+    }
+    
+    // 获取当前用户的帖子（分页）
+    @GetMapping("/my")
+    public ResponseEntity<Map<String, Object>> getMyPosts(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        try {
+            Long currentUserId = getCurrentUserId();
+            Page<Post> pagePosts = postService.getPostsByAuthorIdWithPage(currentUserId, page, size);
+            
+            // 转换为 DTO
+            List<PostDTO> postDTOs = pagePosts.getContent().stream()
+                .map(postMapper::toDTO)
+                .collect(Collectors.toList());
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("data", postDTOs);
+            result.put("currentPage", page);
+            result.put("pageSize", size);
+            result.put("totalElements", pagePosts.getTotalElements());
+            result.put("totalPages", pagePosts.getTotalPages());
+            result.put("first", pagePosts.isFirst());
+            result.put("last", pagePosts.isLast());
+            
+            return ResponseEntity.ok(result);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    // 搜索帖子（综合搜索）
+    @GetMapping("/search")
+    public ResponseEntity<Map<String, Object>> searchPosts(
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Page<Post> pagePosts = postService.searchPosts(keyword, page, size);
+        
+        // 转换为 DTO
+        List<PostDTO> postDTOs = pagePosts.getContent().stream()
+            .map(postMapper::toDTO)
+            .collect(Collectors.toList());
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("data", postDTOs);
+        result.put("currentPage", page);
+        result.put("pageSize", size);
+        result.put("totalElements", pagePosts.getTotalElements());
+        result.put("totalPages", pagePosts.getTotalPages());
+        result.put("first", pagePosts.isFirst());
+        result.put("last", pagePosts.isLast());
+        result.put("keyword", keyword);
+        
+        return ResponseEntity.ok(result);
+    }
+    
+    // 按标题搜索
+    @GetMapping("/search/title")
+    public ResponseEntity<Map<String, Object>> searchByTitle(
+            @RequestParam String title,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Page<Post> pagePosts = postService.searchByTitle(title, page, size);
+        
+        List<PostDTO> postDTOs = pagePosts.getContent().stream()
+            .map(postMapper::toDTO)
+            .collect(Collectors.toList());
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("data", postDTOs);
+        result.put("currentPage", page);
+        result.put("pageSize", size);
+        result.put("totalElements", pagePosts.getTotalElements());
+        result.put("totalPages", pagePosts.getTotalPages());
+        result.put("searchType", "title");
+        result.put("searchTerm", title);
+        
+        return ResponseEntity.ok(result);
+    }
+    
+    // 按标签搜索
+    @GetMapping("/search/tag")
+    public ResponseEntity<Map<String, Object>> searchByTag(
+            @RequestParam String tag,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Page<Post> pagePosts = postService.searchByTag(tag, page, size);
+        
+        List<PostDTO> postDTOs = pagePosts.getContent().stream()
+            .map(postMapper::toDTO)
+            .collect(Collectors.toList());
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("data", postDTOs);
+        result.put("currentPage", page);
+        result.put("pageSize", size);
+        result.put("totalElements", pagePosts.getTotalElements());
+        result.put("totalPages", pagePosts.getTotalPages());
+        result.put("searchType", "tag");
+        result.put("searchTerm", tag);
+        
         return ResponseEntity.ok(result);
     }
 
