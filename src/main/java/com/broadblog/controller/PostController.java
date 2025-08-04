@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.Map;
+import java.util.HashMap;
 
 import com.broadblog.dto.PostDTO;
 import com.broadblog.entity.Post;
@@ -19,6 +21,9 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.data.domain.Page;
+
 
 @RestController
 @RequestMapping("/api/posts")
@@ -82,4 +87,19 @@ public class PostController {
         postService.deletePost(id);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/posts")
+    public ResponseEntity<Map<String, Object>> getPostsByPage(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Page<Post> pagePosts = postService.getPostsByPage(page, size);
+        Map<String, Object> result = new HashMap<>();
+        result.put("data", pagePosts.getContent());
+        result.put("page", page);
+        result.put("size", size);
+        result.put("total", pagePosts.getTotalElements());
+        return ResponseEntity.ok(result);
+    }
+
 }

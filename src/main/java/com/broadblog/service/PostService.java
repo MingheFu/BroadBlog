@@ -2,6 +2,7 @@ package com.broadblog.service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
 
 import com.broadblog.entity.Post;
 import com.broadblog.entity.User;
@@ -9,6 +10,9 @@ import com.broadblog.repository.PostRepository;
 import com.broadblog.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 @Service
 public class PostService {
@@ -53,4 +57,10 @@ public class PostService {
     public List<Post> getPostsByAuthorId(Long authorId) {
         return postRepository.findByAuthorId(authorId);
     }
+
+    public Page<Post> getPostsByPage(int page, int size) {
+        Pageable pageable = PageRequest.of(page - 1, size); // page从0开始
+        return postRepository.findAll(pageable);
+    }
+
 }
