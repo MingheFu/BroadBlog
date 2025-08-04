@@ -3,19 +3,23 @@ package com.broadblog.service;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
 import com.broadblog.entity.User;
 import com.broadblog.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 
 @Service
 public class UserService {
     
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Autowired
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     // 用户注册
@@ -30,7 +34,10 @@ public class UserService {
             throw new RuntimeException("Email already exists");
         }
         
+        // 密码加密
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
        
+        // 设置默认角色
         if (user.getRoles() == null || user.getRoles().isEmpty()) {
             user.setRoles(List.of("USER"));
         }
