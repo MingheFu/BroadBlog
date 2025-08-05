@@ -36,4 +36,7 @@ build/
 
 # test images
 test_avatar.png
-test_avatar.png
+test-avatar.png
+
+# uploads
+uploads/
