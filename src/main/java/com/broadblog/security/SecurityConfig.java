@@ -49,6 +49,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(authz -> authz
                 .requestMatchers("/api/auth/**").permitAll()  // 认证端点允许所有访问
                 .requestMatchers("/api/users/register").permitAll()  // 注册端点允许所有访问
+                .requestMatchers("/api/files/avatar/**").permitAll()  // 头像文件允许所有访问
+                .requestMatchers("/api/files/post-image/**").permitAll()  // 帖子图片允许所有访问
                 .anyRequest().authenticated() 
             )
             .addFilterBefore(jwtAuthenticationFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);

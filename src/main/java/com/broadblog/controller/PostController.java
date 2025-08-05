@@ -54,26 +54,29 @@ public class PostController {
 
     // Create a new post
     @PostMapping
-    public ResponseEntity<PostDTO> createPost(@RequestBody PostDTO postDTO) {
+    public ResponseEntity<?> createPost(@RequestBody PostDTO postDTO) {
         try {
             // 获取当前登录用户ID
             Long currentUserId = getCurrentUserId();
+            System.out.println("Current user ID: " + currentUserId);
             
-            // 创建帖子并设置作者为当前用户
+            // 强制设置作者为当前登录用户，忽略前端传入的 authorId
+            postDTO.setAuthorId(currentUserId);
+            
+            // 创建帖子
             Post post = postMapper.toEntity(postDTO);
             post.setCreatedAt(LocalDateTime.now());
             post.setUpdatedAt(LocalDateTime.now());
             
-            // 强制设置作者为当前登录用户，忽略前端传入的 authorId
-            postDTO.setAuthorId(currentUserId);
-            post = postMapper.toEntity(postDTO);
-            post.setCreatedAt(LocalDateTime.now());
-            post.setUpdatedAt(LocalDateTime.now());
-            
+            System.out.println("Creating post: " + post.getTitle());
             Post savedPost = postService.savePost(post);
             return ResponseEntity.ok(postMapper.toDTO(savedPost));
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().build();
+            System.err.println("Error creating post: " + e.getMessage());
+            e.printStackTrace();
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
         }
     }
 
@@ -111,7 +114,9 @@ public class PostController {
             
             // 权限验证：只能编辑自己的帖子
             if (!post.getAuthor().getId().equals(currentUserId)) {
+                System.out.print("cool");
                 return ResponseEntity.status(403).build(); // 403 Forbidden
+                // System.out.print("cool");
             }
             
             // 更新帖子内容
