@@ -1,7 +1,9 @@
 package com.broadblog.service;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -11,6 +13,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import com.broadblog.entity.Post;
+import com.broadblog.entity.Tag;
 import com.broadblog.entity.User;
 import com.broadblog.repository.PostRepository;
 import com.broadblog.repository.UserRepository;
@@ -20,11 +23,13 @@ public class PostService {
 
     private final PostRepository postRepository;
     private final UserRepository userRepository;
+    private final TagService tagService;
 
     @Autowired
-    public PostService(PostRepository postRepository, UserRepository userRepository) {
+    public PostService(PostRepository postRepository, UserRepository userRepository, TagService tagService) {
         this.postRepository = postRepository;
         this.userRepository = userRepository;
+        this.tagService = tagService;
     }
 
     // Create or update a post
@@ -36,7 +41,23 @@ public class PostService {
         } else {
             throw new RuntimeException("Author is required");
         }
-        return postRepository.save(post);
+        
+        // 处理标签使用计数
+        Set<Tag> oldTags = new HashSet<>();
+        if (post.getId() != null) {
+            // 更新帖子：获取原有标签
+            Optional<Post> existingPost = postRepository.findById(post.getId());
+            if (existingPost.isPresent() && existingPost.get().getTags() != null) {
+                oldTags = new HashSet<>(existingPost.get().getTags());
+            }
+        }
+        
+        Post savedPost = postRepository.save(post);
+        
+        // 更新标签使用计数
+        updateTagUsageCounts(oldTags, savedPost.getTags() != null ? new HashSet<>(savedPost.getTags()) : new HashSet<>());
+        
+        return savedPost;
     }
 
     // Get all posts
@@ -51,6 +72,14 @@ public class PostService {
 
     // Delete a post by ID
     public void deletePost(Long id) {
+        // 获取要删除的帖子的标签，减少使用计数
+        Optional<Post> postToDelete = postRepository.findById(id);
+        if (postToDelete.isPresent() && postToDelete.get().getTags() != null) {
+            for (Tag tag : postToDelete.get().getTags()) {
+                tagService.decrementTagUsage(tag.getId());
+            }
+        }
+        
         postRepository.deleteById(id);
     }
 
@@ -117,6 +146,23 @@ public class PostService {
         
         Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         return postRepository.findByTagsNameContaining(tagName, pageable);
+    }
+    
+    // 辅助方法：更新标签使用计数
+    private void updateTagUsageCounts(Set<Tag> oldTags, Set<Tag> newTags) {
+        // 找出被移除的标签，减少使用计数
+        for (Tag oldTag : oldTags) {
+            if (!newTags.contains(oldTag)) {
+                tagService.decrementTagUsage(oldTag.getId());
+            }
+        }
+        
+        // 找出新添加的标签，增加使用计数
+        for (Tag newTag : newTags) {
+            if (!oldTags.contains(newTag)) {
+                tagService.incrementTagUsage(newTag.getId());
+            }
+        }
     }
 
 }

@@ -1,13 +1,11 @@
 package com.broadblog.controller;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import com.broadblog.dto.TagDTO;
-import com.broadblog.entity.Tag;
-import com.broadblog.mapper.TagMapper;
-import com.broadblog.service.TagService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +17,12 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.broadblog.dto.TagCloudDTO;
+import com.broadblog.dto.TagDTO;
+import com.broadblog.entity.Tag;
+import com.broadblog.mapper.TagMapper;
+import com.broadblog.service.TagService;
 
 @RestController
 @RequestMapping("/api/tags")
@@ -95,5 +99,57 @@ public class TagController {
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
+    }
+    
+    // 获取热门标签（使用次数 > 0）
+    @GetMapping("/popular")
+    public ResponseEntity<List<TagCloudDTO>> getPopularTags() {
+        List<Tag> popularTags = tagService.getPopularTags();
+        List<TagCloudDTO> tagCloudDTOs = popularTags.stream()
+            .map(this::convertToTagCloudDTO)
+            .collect(Collectors.toList());
+        return ResponseEntity.ok(tagCloudDTOs);
+    }
+    
+    // 获取标签云（前20个最热门标签）
+    @GetMapping("/cloud")
+    public ResponseEntity<List<TagCloudDTO>> getTagCloud() {
+        List<Tag> tagCloud = tagService.getTagCloud();
+        List<TagCloudDTO> tagCloudDTOs = tagCloud.stream()
+            .map(this::convertToTagCloudDTO)
+            .collect(Collectors.toList());
+        return ResponseEntity.ok(tagCloudDTOs);
+    }
+    
+    // 获取标签统计信息
+    @GetMapping("/statistics")
+    public ResponseEntity<Map<String, Object>> getTagStatistics() {
+        List<Object[]> statistics = tagService.getTagStatistics();
+        
+        Map<String, Object> result = new HashMap<>();
+        Map<String, Long> categoryStats = new HashMap<>();
+        
+        for (Object[] stat : statistics) {
+            String categoryName = (String) stat[0];
+            Long count = (Long) stat[1];
+            categoryStats.put(categoryName != null ? categoryName : "未分类", count);
+        }
+        
+        result.put("totalTags", tagService.getAllTags().size());
+        result.put("categoryStats", categoryStats);
+        result.put("popularTagsCount", tagService.getPopularTags().size());
+        
+        return ResponseEntity.ok(result);
+    }
+    
+    // 辅助方法：将 Tag 转换为 TagCloudDTO
+    private TagCloudDTO convertToTagCloudDTO(Tag tag) {
+        return new TagCloudDTO(
+            tag.getId(),
+            tag.getName(),
+            tag.getDescription(),
+            tag.getUsageCount(),
+            tag.getCategory() != null ? tag.getCategory().getName() : null
+        );
     }
 } 
