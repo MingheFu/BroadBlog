@@ -88,4 +88,14 @@ public class TagService {
             tagRepository.save(tag);
         }
     }
+    
+    // 根据分类ID获取标签
+    public List<Tag> getTagsByCategory(Long categoryId) {
+        return tagRepository.findByCategoryId(categoryId);
+    }
+    
+    // 根据分类获取标签
+    public List<Tag> getTagsByCategory(com.broadblog.entity.TagCategory category) {
+        return tagRepository.findByCategory(category);
+    }
 } 

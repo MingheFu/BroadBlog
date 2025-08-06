@@ -142,6 +142,16 @@ public class TagController {
         return ResponseEntity.ok(result);
     }
     
+    // 根据分类ID获取标签
+    @GetMapping("/category/{categoryId}")
+    public ResponseEntity<List<TagCloudDTO>> getTagsByCategory(@PathVariable Long categoryId) {
+        List<Tag> tags = tagService.getTagsByCategory(categoryId);
+        List<TagCloudDTO> tagCloudDTOs = tags.stream()
+            .map(this::convertToTagCloudDTO)
+            .collect(Collectors.toList());
+        return ResponseEntity.ok(tagCloudDTOs);
+    }
+    
     // 辅助方法：将 Tag 转换为 TagCloudDTO
     private TagCloudDTO convertToTagCloudDTO(Tag tag) {
         return new TagCloudDTO(
