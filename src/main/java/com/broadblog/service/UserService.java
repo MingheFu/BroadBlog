@@ -74,9 +74,4 @@ public class UserService {
     public void deleteUser(Long id) {
         userRepository.deleteById(id);
     }
-
-    
-    public void sayHello() {
-        System.out.println("Hello from UserService!");
-    }
 }

@@ -139,6 +139,15 @@ public class PostService {
         return postRepository.findByContentContainingIgnoreCase(content, pageable);
     }
     
+    // 按标题或内容搜索（复合搜索）
+    public Page<Post> searchByTitleOrContent(String keyword, int page, int size) {
+        if (page < 1) page = 1;
+        if (size < 1 || size > 100) size = 10;
+        
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        return postRepository.findByTitleOrContentContaining(keyword, pageable);
+    }
+    
     // 按标签搜索
     public Page<Post> searchByTag(String tagName, int page, int size) {
         if (page < 1) page = 1;

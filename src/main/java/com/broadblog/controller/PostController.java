@@ -291,6 +291,56 @@ public class PostController {
         return ResponseEntity.ok(result);
     }
     
+    // 按内容搜索
+    @GetMapping("/search/content")
+    public ResponseEntity<Map<String, Object>> searchByContent(
+            @RequestParam String content,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Page<Post> pagePosts = postService.searchByContent(content, page, size);
+        
+        List<PostDTO> postDTOs = pagePosts.getContent().stream()
+            .map(postMapper::toDTO)
+            .collect(Collectors.toList());
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("data", postDTOs);
+        result.put("currentPage", page);
+        result.put("pageSize", size);
+        result.put("totalElements", pagePosts.getTotalElements());
+        result.put("totalPages", pagePosts.getTotalPages());
+        result.put("searchType", "content");
+        result.put("searchTerm", content);
+        
+        return ResponseEntity.ok(result);
+    }
+    
+    // 按标题或内容搜索（复合搜索）
+    @GetMapping("/search/title-content")
+    public ResponseEntity<Map<String, Object>> searchByTitleOrContent(
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Page<Post> pagePosts = postService.searchByTitleOrContent(keyword, page, size);
+        
+        List<PostDTO> postDTOs = pagePosts.getContent().stream()
+            .map(postMapper::toDTO)
+            .collect(Collectors.toList());
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("data", postDTOs);
+        result.put("currentPage", page);
+        result.put("pageSize", size);
+        result.put("totalElements", pagePosts.getTotalElements());
+        result.put("totalPages", pagePosts.getTotalPages());
+        result.put("searchType", "title-content");
+        result.put("searchTerm", keyword);
+        
+        return ResponseEntity.ok(result);
+    }
+    
     // 按标签搜索
     @GetMapping("/search/tag")
     public ResponseEntity<Map<String, Object>> searchByTag(
