@@ -27,6 +27,7 @@ import com.broadblog.entity.Post;
 import com.broadblog.mapper.PostMapper;
 import com.broadblog.security.CustomUserDetails;
 import com.broadblog.service.PostService;
+import com.broadblog.service.UserService;
 
 
 @RestController
@@ -35,11 +36,13 @@ public class PostController {
 
     private final PostService postService;
     private final PostMapper postMapper;
+    private final UserService userService;
 
     @Autowired
-    public PostController(PostService postService, PostMapper postMapper) {
+    public PostController(PostService postService, PostMapper postMapper, UserService userService) {
         this.postService = postService;
         this.postMapper = postMapper;
+        this.userService = userService;
     }
     
     // 辅助方法：获取当前登录用户
@@ -50,6 +53,17 @@ public class PostController {
             return userDetails.getUser().getId();
         }
         throw new RuntimeException("User not authenticated");
+    }
+
+    // 检查权限：用户只能管理自己的帖子，管理员可以管理所有帖子
+    private boolean hasPermission(Long postAuthorId) {
+        Long currentUserId = getCurrentUserId();
+        // 如果是管理自己的帖子，允许
+        if (currentUserId.equals(postAuthorId)) {
+            return true;
+        }
+        // 如果是管理员，允许管理所有帖子
+        return userService.isAdmin(currentUserId);
     }
 
     // Create a new post
@@ -112,11 +126,9 @@ public class PostController {
             
             Post post = optionalPost.get();
             
-            // 权限验证：只能编辑自己的帖子
-            if (!post.getAuthor().getId().equals(currentUserId)) {
-                System.out.print("cool");
+            // 权限验证：只能编辑自己的帖子，管理员可以编辑所有帖子
+            if (!hasPermission(post.getAuthor().getId())) {
                 return ResponseEntity.status(403).build(); // 403 Forbidden
-                // System.out.print("cool");
             }
             
             // 更新帖子内容
@@ -145,8 +157,8 @@ public class PostController {
             
             Post post = optionalPost.get();
             
-            // 权限验证：只能删除自己的帖子
-            if (!post.getAuthor().getId().equals(currentUserId)) {
+            // 权限验证：只能删除自己的帖子，管理员可以删除所有帖子
+            if (!hasPermission(post.getAuthor().getId())) {
                 return ResponseEntity.status(403).build(); // 403 Forbidden
             }
             

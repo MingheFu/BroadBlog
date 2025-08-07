@@ -9,6 +9,8 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,7 +24,9 @@ import com.broadblog.dto.TagCloudDTO;
 import com.broadblog.dto.TagDTO;
 import com.broadblog.entity.Tag;
 import com.broadblog.mapper.TagMapper;
+import com.broadblog.security.CustomUserDetails;
 import com.broadblog.service.TagService;
+import com.broadblog.service.UserService;
 
 @RestController
 @RequestMapping("/api/tags")
@@ -30,22 +34,45 @@ public class TagController {
     
     private final TagService tagService;
     private final TagMapper tagMapper;
+    private final UserService userService;
     
     @Autowired
-    public TagController(TagService tagService, TagMapper tagMapper) {
+    public TagController(TagService tagService, TagMapper tagMapper, UserService userService) {
         this.tagService = tagService;
         this.tagMapper = tagMapper;
+        this.userService = userService;
+    }
+
+    // 获取当前用户ID
+    private Long getCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof CustomUserDetails) {
+            CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+            return userDetails.getUser().getId();
+        }
+        throw new RuntimeException("User not authenticated");
+    }
+
+    // 检查是否为管理员
+    private boolean isAdmin() {
+        Long currentUserId = getCurrentUserId();
+        return userService.isAdmin(currentUserId);
     }
     
     @PostMapping
-    public ResponseEntity<TagDTO> createTag(@RequestBody TagDTO tagDTO) {
+    public ResponseEntity<?> createTag(@RequestBody TagDTO tagDTO) {
         try {
+            // 只有管理员可以创建标签
+            if (!isAdmin()) {
+                return ResponseEntity.status(403).body("{\"error\": \"Access denied. Admin role required.\"}");
+            }
+            
             Tag tag = tagMapper.toEntity(tagDTO);
             Tag savedTag = tagService.saveTag(tag);
             return ResponseEntity.ok(tagMapper.toDTO(savedTag));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(null);
+                .body("{\"error\": \"" + e.getMessage() + "\"}");
         }
     }
     
@@ -73,8 +100,13 @@ public class TagController {
     }
     
     @PutMapping("/{id}")
-    public ResponseEntity<TagDTO> updateTag(@PathVariable Long id, @RequestBody TagDTO tagDTO) {
+    public ResponseEntity<?> updateTag(@PathVariable Long id, @RequestBody TagDTO tagDTO) {
         try {
+            // 只有管理员可以更新标签
+            if (!isAdmin()) {
+                return ResponseEntity.status(403).body("{\"error\": \"Access denied. Admin role required.\"}");
+            }
+            
             Optional<Tag> optionalTag = tagService.getTagById(id);
             if (optionalTag.isEmpty()) {
                 return ResponseEntity.notFound().build();
@@ -87,17 +119,23 @@ public class TagController {
             return ResponseEntity.ok(tagMapper.toDTO(updatedTag));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(null);
+                .body("{\"error\": \"" + e.getMessage() + "\"}");
         }
     }
     
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteTag(@PathVariable Long id) {
+    public ResponseEntity<?> deleteTag(@PathVariable Long id) {
         try {
+            // 只有管理员可以删除标签
+            if (!isAdmin()) {
+                return ResponseEntity.status(403).body("{\"error\": \"Access denied. Admin role required.\"}");
+            }
+            
             tagService.deleteTag(id);
-            return ResponseEntity.noContent().build();
+            return ResponseEntity.ok().build();
         } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body("{\"error\": \"" + e.getMessage() + "\"}");
         }
     }
     
