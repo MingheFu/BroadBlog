@@ -21,7 +21,9 @@ public class CustomUserDetails implements UserDetails {
     public Collection<? extends GrantedAuthority> getAuthorities() {
         List<String> roles = user.getRoles();
         return roles == null ? List.of() :
-            roles.stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList());
+            roles.stream()
+                .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                .collect(Collectors.toList());
     }
 
     @Override

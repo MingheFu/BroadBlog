@@ -51,6 +51,11 @@ public class SecurityConfig {
                 .requestMatchers("/api/users/register").permitAll()  // 注册端点允许所有访问
                 .requestMatchers("/api/files/avatar/**").permitAll()  // 头像文件允许所有访问
                 .requestMatchers("/api/files/post-image/**").permitAll()  // 帖子图片允许所有访问
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")  // 管理员专用端点
+                .requestMatchers("/api/users/**").hasAnyRole("USER", "ADMIN")  // 用户管理需要认证
+                .requestMatchers("/api/posts/**").hasAnyRole("USER", "ADMIN")  // 帖子管理需要认证
+                .requestMatchers("/api/comments/**").hasAnyRole("USER", "ADMIN")  // 评论管理需要认证
+                .requestMatchers("/api/tags/**").hasAnyRole("USER", "ADMIN")  // 标签管理需要认证
                 .anyRequest().authenticated() 
             )
             .addFilterBefore(jwtAuthenticationFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
