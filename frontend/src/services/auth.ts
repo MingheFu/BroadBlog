@@ -11,13 +11,18 @@ export interface RegisterRequest {
   email: string
 }
 
+export interface User {
+  id: number
+  username: string
+  email: string
+  roles: string[]
+}
+
 export interface AuthResponse {
   token: string
-  user: {
-    id: number
-    username: string
-    email: string
-  }
+  refreshToken?: string
+  user: User
+  message?: string
 }
 
 export const authService = {
@@ -25,6 +30,9 @@ export const authService = {
     const response = await api.post('/auth/login', credentials)
     const data = response.data
     localStorage.setItem('token', data.token)
+    if (data.refreshToken) {
+      localStorage.setItem('refreshToken', data.refreshToken)
+    }
     return data
   },
 
@@ -32,15 +40,23 @@ export const authService = {
     const response = await api.post('/auth/register', userData)
     const data = response.data
     localStorage.setItem('token', data.token)
+    if (data.refreshToken) {
+      localStorage.setItem('refreshToken', data.refreshToken)
+    }
     return data
   },
 
   logout(): void {
     localStorage.removeItem('token')
+    localStorage.removeItem('refreshToken')
   },
 
   getToken(): string | null {
     return localStorage.getItem('token')
+  },
+
+  getRefreshToken(): string | null {
+    return localStorage.getItem('refreshToken')
   },
 
   isAuthenticated(): boolean {

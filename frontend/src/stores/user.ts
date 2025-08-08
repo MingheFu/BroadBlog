@@ -2,8 +2,15 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { authService, type AuthResponse } from '@/services/auth'
 
+export interface User {
+  id: number
+  username: string
+  email: string
+  roles: string[]
+}
+
 export const useUserStore = defineStore('user', () => {
-  const user = ref<AuthResponse['user'] | null>(null)
+  const user = ref<User | null>(null)
   const token = ref<string | null>(null)
   const isAuthenticated = ref(false)
 
@@ -48,6 +55,21 @@ export const useUserStore = defineStore('user', () => {
     isAuthenticated.value = false
   }
 
+  // Check if user has specific role
+  const hasRole = (role: string): boolean => {
+    return user.value?.roles?.includes(role) || false
+  }
+
+  // Check if user is admin
+  const isAdmin = (): boolean => {
+    return hasRole('ADMIN')
+  }
+
+  // Check if user is regular user
+  const isUser = (): boolean => {
+    return hasRole('USER')
+  }
+
   return {
     user,
     token,
@@ -55,6 +77,9 @@ export const useUserStore = defineStore('user', () => {
     initAuth,
     login,
     register,
-    logout
+    logout,
+    hasRole,
+    isAdmin,
+    isUser
   }
 }) 

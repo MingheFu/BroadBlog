@@ -3,16 +3,19 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
+import { statsService, type SystemStats } from '@/services/stats'
 
 const router = useRouter()
 const userStore = useUserStore()
 
 const activeIndex = ref('home')
+const loading = ref(false)
 
-const stats = reactive({
-  posts: 0,
-  users: 0,
-  comments: 0
+const stats = reactive<SystemStats>({
+  totalPosts: 0,
+  totalUsers: 0,
+  totalComments: 0,
+  totalTags: 0
 })
 
 const handleSelect = (key: string) => {
@@ -21,10 +24,24 @@ const handleSelect = (key: string) => {
       router.push('/posts')
       break
     case 'users':
-      router.push('/users')
+      if (userStore.isAdmin()) {
+        router.push('/users')
+      } else {
+        ElMessage.warning('Access denied. Admin role required.')
+      }
       break
     case 'comments':
       router.push('/comments')
+      break
+    case 'tags':
+      router.push('/tags')
+      break
+    case 'admin':
+      if (userStore.isAdmin()) {
+        router.push('/admin')
+      } else {
+        ElMessage.warning('Access denied. Admin role required.')
+      }
       break
   }
 }
@@ -42,11 +59,30 @@ const handleCommand = (command: string) => {
   }
 }
 
+const loadStats = async () => {
+  try {
+    loading.value = true
+    if (userStore.isAdmin()) {
+      // Admin can see all stats
+      const systemStats = await statsService.getSystemStats()
+      Object.assign(stats, systemStats)
+    } else {
+      // Regular user sees limited stats
+      stats.totalPosts = 0
+      stats.totalUsers = 0
+      stats.totalComments = 0
+      stats.totalTags = 0
+    }
+  } catch (error: any) {
+    console.error('Failed to load stats:', error)
+    ElMessage.error('Failed to load statistics')
+  } finally {
+    loading.value = false
+  }
+}
+
 onMounted(() => {
-  // TODO: Load statistics from backend
-  stats.posts = 25
-  stats.users = 10
-  stats.comments = 156
+  loadStats()
 })
 </script>
 
@@ -65,8 +101,20 @@ onMounted(() => {
               @select="handleSelect"
             >
               <el-menu-item index="posts">Post Management</el-menu-item>
-              <el-menu-item index="users">User Management</el-menu-item>
+              <el-menu-item 
+                v-if="userStore.isAdmin()" 
+                index="users"
+              >
+                User Management
+              </el-menu-item>
               <el-menu-item index="comments">Comment Management</el-menu-item>
+              <el-menu-item index="tags">Tag Management</el-menu-item>
+              <el-menu-item 
+                v-if="userStore.isAdmin()" 
+                index="admin"
+              >
+                Admin Panel
+              </el-menu-item>
             </el-menu>
           </div>
           <div class="user-info">
@@ -92,52 +140,72 @@ onMounted(() => {
             <template #header>
               <div class="welcome-header">
                 <h3>Welcome to BroadBlog Management System</h3>
+                <p v-if="userStore.isAdmin()" class="role-badge admin">Administrator</p>
+                <p v-else class="role-badge user">Regular User</p>
               </div>
             </template>
             <div class="welcome-content">
               <p>This is a full-stack blog management system based on Spring Boot + Vue.js</p>
-              <p>You can manage posts, users, and comments here</p>
+              <p v-if="userStore.isAdmin()">
+                As an administrator, you can manage all posts, users, comments, and tags.
+              </p>
+              <p v-else>
+                As a regular user, you can manage your own posts and comments.
+              </p>
             </div>
           </el-card>
         </div>
         
         <div class="stats-section">
           <el-row :gutter="20">
-            <el-col :span="8">
+            <el-col :span="6">
               <el-card class="stat-card">
                 <div class="stat-content">
                   <div class="stat-icon">
                     <el-icon><Document /></el-icon>
                   </div>
                   <div class="stat-info">
-                    <div class="stat-number">{{ stats.posts }}</div>
+                    <div class="stat-number">{{ stats.totalPosts }}</div>
                     <div class="stat-label">Total Posts</div>
                   </div>
                 </div>
               </el-card>
             </el-col>
-            <el-col :span="8">
+            <el-col :span="6" v-if="userStore.isAdmin()">
               <el-card class="stat-card">
                 <div class="stat-content">
                   <div class="stat-icon">
                     <el-icon><User /></el-icon>
                   </div>
                   <div class="stat-info">
-                    <div class="stat-number">{{ stats.users }}</div>
+                    <div class="stat-number">{{ stats.totalUsers }}</div>
                     <div class="stat-label">Total Users</div>
                   </div>
                 </div>
               </el-card>
             </el-col>
-            <el-col :span="8">
+            <el-col :span="6">
               <el-card class="stat-card">
                 <div class="stat-content">
                   <div class="stat-icon">
                     <el-icon><ChatDotRound /></el-icon>
                   </div>
                   <div class="stat-info">
-                    <div class="stat-number">{{ stats.comments }}</div>
+                    <div class="stat-number">{{ stats.totalComments }}</div>
                     <div class="stat-label">Total Comments</div>
+                  </div>
+                </div>
+              </el-card>
+            </el-col>
+            <el-col :span="6">
+              <el-card class="stat-card">
+                <div class="stat-content">
+                  <div class="stat-icon">
+                    <el-icon><Collection /></el-icon>
+                  </div>
+                  <div class="stat-info">
+                    <div class="stat-number">{{ stats.totalTags }}</div>
+                    <div class="stat-label">Total Tags</div>
                   </div>
                 </div>
               </el-card>
@@ -195,9 +263,33 @@ onMounted(() => {
   margin-bottom: 20px;
 }
 
+.welcome-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .welcome-header h3 {
   margin: 0;
   color: #409eff;
+}
+
+.role-badge {
+  margin: 0;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.role-badge.admin {
+  background-color: #f56c6c;
+  color: white;
+}
+
+.role-badge.user {
+  background-color: #67c23a;
+  color: white;
 }
 
 .welcome-content {

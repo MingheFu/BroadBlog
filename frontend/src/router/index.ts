@@ -1,7 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import HomeView from '../views/HomeView.vue'
-import LoginView from '../views/LoginView.vue'
+import HomeView from '@/views/HomeView.vue'
+import LoginView from '@/views/LoginView.vue'
+import PostsView from '@/views/PostsView.vue'
+import UsersView from '@/views/UsersView.vue'
+import CommentsView from '@/views/CommentsView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -20,20 +23,32 @@ const router = createRouter({
     {
       path: '/posts',
       name: 'posts',
-      component: () => import('../views/PostsView.vue'),
+      component: PostsView,
       meta: { requiresAuth: true }
     },
     {
       path: '/users',
       name: 'users',
-      component: () => import('../views/UsersView.vue'),
-      meta: { requiresAuth: true }
+      component: UsersView,
+      meta: { requiresAuth: true, requiresAdmin: true }
     },
     {
       path: '/comments',
       name: 'comments',
-      component: () => import('../views/CommentsView.vue'),
+      component: CommentsView,
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/tags',
+      name: 'tags',
+      component: () => import('@/views/TagsView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/admin',
+      name: 'admin',
+      component: () => import('@/views/AdminView.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true }
     }
   ]
 })
@@ -44,7 +59,7 @@ router.beforeEach((to, from, next) => {
   
   if (to.meta.requiresAuth && !userStore.isAuthenticated) {
     next('/login')
-  } else if (to.path === '/login' && userStore.isAuthenticated) {
+  } else if (to.meta.requiresAdmin && !userStore.isAdmin()) {
     next('/')
   } else {
     next()
