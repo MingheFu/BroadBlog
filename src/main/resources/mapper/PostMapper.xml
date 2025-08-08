@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.broadblog.mapper.mybatis.PostMapper">
+    
+    <!-- 结果映射 -->
+    <resultMap id="PostResultMap" type="com.broadblog.entity.Post">
+        <id column="id" property="id" />
+        <result column="title" property="title" />
+        <result column="content" property="content" />
+        <result column="created_at" property="createdAt" />
+        <result column="updated_at" property="updatedAt" />
+        <!-- 关联作者信息 -->
+        <association property="author" javaType="com.broadblog.entity.User">
+            <id column="author_id" property="id" />
+            <result column="author_username" property="username" />
+            <result column="author_email" property="email" />
+        </association>
+        <!-- 关联标签信息 -->
+        <collection property="tags" ofType="com.broadblog.entity.Tag">
+            <id column="tag_id" property="id" />
+            <result column="tag_name" property="name" />
+        </collection>
+    </resultMap>
+    
+    <!-- 基础查询字段 -->
+    <sql id="Base_Column_List">
+        p.id, p.title, p.content, p.created_at, p.updated_at,
+        u.id as author_id, u.username as author_username, u.email as author_email
+    </sql>
+    
+    <!-- 包含标签的查询字段 -->
+    <sql id="Post_With_Tags_Column_List">
+        p.id, p.title, p.content, p.created_at, p.updated_at,
+        u.id as author_id, u.username as author_username, u.email as author_email,
+        t.id as tag_id, t.name as tag_name
+    </sql>
+    
+    <!-- 基础表连接 -->
+    <sql id="Base_Join">
+        FROM posts p
+        LEFT JOIN users u ON p.author_id = u.id
+    </sql>
+    
+    <!-- 包含标签的表连接 -->
+    <sql id="Post_With_Tags_Join">
+        FROM posts p
+        LEFT JOIN users u ON p.author_id = u.id
+        LEFT JOIN post_tags pt ON p.id = pt.post_id
+        LEFT JOIN tags t ON pt.tag_id = t.id
+    </sql>
+    
+    <!-- 查询所有文章 -->
+    <select id="selectAll" resultMap="PostResultMap">
+        SELECT <include refid="Base_Column_List" />
+        <include refid="Base_Join" />
+        ORDER BY p.created_at DESC
+    </select>
+    
+    <!-- 根据ID查询文章 -->
+    <select id="selectById" resultMap="PostResultMap">
+        SELECT <include refid="Base_Column_List" />
+        <include refid="Base_Join" />
+        WHERE p.id = #{id}
+    </select>
+    
+    <!-- 分页查询 -->
+    <select id="selectByPage" resultMap="PostResultMap">
+        SELECT <include refid="Base_Column_List" />
+        <include refid="Base_Join" />
+        ORDER BY p.created_at DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+    
+    <!-- 统计总数 -->
+    <select id="countTotal" resultType="long">
+        SELECT COUNT(*) FROM posts
+    </select>
+    
+    <!-- 根据作者ID查询 -->
+    <select id="selectByAuthorId" resultMap="PostResultMap">
+        SELECT <include refid="Base_Column_List" />
+        <include refid="Base_Join" />
+        WHERE p.author_id = #{authorId}
+        ORDER BY p.created_at DESC
+    </select>
+    
+    <!-- 根据作者ID分页查询 -->
+    <select id="selectByAuthorIdWithPage" resultMap="PostResultMap">
+        SELECT <include refid="Base_Column_List" />
+        <include refid="Base_Join" />
+        WHERE p.author_id = #{authorId}
+        ORDER BY p.created_at DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+    
+    <!-- 统计作者文章数 -->
+    <select id="countByAuthorId" resultType="long">
+        SELECT COUNT(*) FROM posts WHERE author_id = #{authorId}
+    </select>
+    
+    <!-- 按标题搜索 -->
+    <select id="searchByTitle" resultMap="PostResultMap">
+        SELECT <include refid="Base_Column_List" />
+        <include refid="Base_Join" />
+        WHERE LOWER(p.title) LIKE LOWER(CONCAT('%', #{title}, '%'))
+        ORDER BY p.created_at DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+    
+    <!-- 按内容搜索 -->
+    <select id="searchByContent" resultMap="PostResultMap">
+        SELECT <include refid="Base_Column_List" />
+        <include refid="Base_Join" />
+        WHERE LOWER(p.content) LIKE LOWER(CONCAT('%', #{content}, '%'))
+        ORDER BY p.created_at DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+    
+    <!-- 按标题或内容搜索 -->
+    <select id="searchByTitleOrContent" resultMap="PostResultMap">
+        SELECT <include refid="Base_Column_List" />
+        <include refid="Base_Join" />
+        WHERE LOWER(p.title) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
+           OR LOWER(p.content) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
+        ORDER BY p.created_at DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+    
+    <!-- 按标签搜索 -->
+    <select id="searchByTag" resultMap="PostResultMap">
+        SELECT DISTINCT <include refid="Base_Column_List" />
+        <include refid="Post_With_Tags_Join" />
+        WHERE LOWER(t.name) LIKE LOWER(CONCAT('%', #{tagName}, '%'))
+        ORDER BY p.created_at DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+    
+    <!-- 综合搜索 -->
+    <select id="searchPosts" resultMap="PostResultMap">
+        SELECT DISTINCT <include refid="Base_Column_List" />
+        <include refid="Post_With_Tags_Join" />
+        WHERE LOWER(p.title) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
+           OR LOWER(p.content) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
+           OR LOWER(t.name) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
+        ORDER BY p.created_at DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+    
+    <!-- 插入文章 -->
+    <insert id="insert" parameterType="com.broadblog.entity.Post" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO posts (title, content, author_id, created_at, updated_at)
+        VALUES (#{title}, #{content}, #{author.id}, NOW(), NOW())
+    </insert>
+    
+    <!-- 更新文章 -->
+    <update id="update" parameterType="com.broadblog.entity.Post">
+        UPDATE posts 
+        SET title = #{title}, content = #{content}, updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+    
+    <!-- 删除文章 -->
+    <delete id="deleteById">
+        DELETE FROM posts WHERE id = #{id}
+    </delete>
+    
+    <!-- 统计搜索结果的辅助方法 -->
+    <select id="countByTitle" resultType="long">
+        SELECT COUNT(*) FROM posts WHERE LOWER(title) LIKE LOWER(CONCAT('%', #{title}, '%'))
+    </select>
+    
+    <select id="countByContent" resultType="long">
+        SELECT COUNT(*) FROM posts WHERE LOWER(content) LIKE LOWER(CONCAT('%', #{content}, '%'))
+    </select>
+    
+    <select id="countByTitleOrContent" resultType="long">
+        SELECT COUNT(*) FROM posts 
+        WHERE LOWER(title) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
+           OR LOWER(content) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
+    </select>
+    
+    <select id="countByTag" resultType="long">
+        SELECT COUNT(DISTINCT p.id) 
+        FROM posts p
+        LEFT JOIN post_tags pt ON p.id = pt.post_id
+        LEFT JOIN tags t ON pt.tag_id = t.id
+        WHERE LOWER(t.name) LIKE LOWER(CONCAT('%', #{tagName}, '%'))
+    </select>
+    
+    <select id="countSearchResults" resultType="long">
+        SELECT COUNT(DISTINCT p.id) 
+        FROM posts p
+        LEFT JOIN post_tags pt ON p.id = pt.post_id
+        LEFT JOIN tags t ON pt.tag_id = t.id
+        WHERE LOWER(p.title) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
+           OR LOWER(p.content) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
+           OR LOWER(t.name) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
+    </select>
+    
+</mapper>
