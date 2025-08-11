@@ -127,12 +127,7 @@ public class TagService {
         return tagRepository.findByCategory(category);
     }
     
-    // ========== 新增的Redis缓存功能 ==========
-    
-    /**
-     * 获取热门标签排行（前N个）
-     * 使用Redis有序集合实现，按使用次数排序
-     */
+
     public List<Tag> getTopPopularTags(int top) {
         String popularTagsKey = "popular_tags_ranking";
         

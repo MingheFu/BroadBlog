@@ -184,13 +184,7 @@ public class PostService {
         Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         return postRepository.findByTagsNameContaining(tagName, pageable);
     }
-    
-    // ========== 新增的Redis缓存功能 ==========
-    
-    /**
-     * 获取热门文章排行（前N篇）
-     * 使用Redis有序集合实现，按阅读量排序
-     */
+
     public List<Post> getHotPosts(int top) {
         String hotPostsKey = "hot_posts";
         
@@ -272,7 +266,7 @@ public class PostService {
         Optional<Long> views = cacheService.get(viewKey, Long.class);
         return views.orElse(0L);
     }
-    
+
     /**
      * 清除文章相关的缓存
      */
