@@ -153,6 +153,48 @@ public class CacheService {
     }
 
     /**
+     * 添加到集合
+     */
+    public void sAdd(String key, Object value) {
+        redisTemplate.opsForSet().add(key, value);
+    }
+
+    /**
+     * 从集合中移除
+     */
+    public void sRem(String key, Object value) {
+        redisTemplate.opsForSet().remove(key, value);
+    }
+
+    /**
+     * 检查集合中是否包含某个值
+     */
+    public boolean sIsMember(String key, Object value) {
+        return Boolean.TRUE.equals(redisTemplate.opsForSet().isMember(key, value));
+    }
+
+    /**
+     * 获取集合的大小
+     */
+    public Long sCard(String key) {
+        return redisTemplate.opsForSet().size(key);
+    }
+
+    /**
+     * 获取集合的所有成员
+     */
+    public Set<Object> sMembers(String key) {
+        return redisTemplate.opsForSet().members(key);
+    }
+
+    /**
+     * 获取集合的随机成员
+     */
+    public Object sRandomMember(String key) {
+        return redisTemplate.opsForSet().randomMember(key);
+    }
+
+    /**
      * 清除所有缓存（谨慎使用）
      */
     public void clearAll() {
