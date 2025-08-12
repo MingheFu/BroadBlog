@@ -40,3 +40,5 @@ test-avatar.png
 
 # uploads
 uploads/
+
+app.log
