@@ -14,12 +14,15 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.PageImpl;
 
 import com.broadblog.entity.Post;
 import com.broadblog.entity.Tag;
 import com.broadblog.entity.User;
 import com.broadblog.repository.PostRepository;
 import com.broadblog.repository.UserRepository;
+import com.broadblog.search.PostDocument;
+import com.broadblog.search.PostSearchService;
 
 @Service
 public class PostService {
@@ -28,14 +31,16 @@ public class PostService {
     private final UserRepository userRepository;
     private final TagService tagService;
     private final CacheService cacheService;
+    private final PostSearchService postSearchService;
 
     @Autowired
     public PostService(PostRepository postRepository, UserRepository userRepository, 
-                      TagService tagService, CacheService cacheService) {
+                      TagService tagService, CacheService cacheService, PostSearchService postSearchService) {
         this.postRepository = postRepository;
         this.userRepository = userRepository;
         this.tagService = tagService;
         this.cacheService = cacheService;
+        this.postSearchService = postSearchService;
     }
 
     // Create or update a post
@@ -60,6 +65,12 @@ public class PostService {
         }
         
         Post savedPost = postRepository.save(post);
+        // 同步到 Elasticsearch 索引
+        try {
+            postSearchService.indexPost(savedPost);
+        } catch (Exception e) {
+            System.err.println("Failed to index post to Elasticsearch: " + e.getMessage());
+        }
         
         // 更新标签使用计数
         updateTagUsageCounts(oldTags, savedPost.getTags() != null ? new HashSet<>(savedPost.getTags()) : new HashSet<>());
@@ -96,6 +107,12 @@ public class PostService {
         }
         
         postRepository.deleteById(id);
+        // 从 Elasticsearch 删除
+        try {
+            postSearchService.deletePost(id);
+        } catch (Exception e) {
+            System.err.println("Failed to delete post from Elasticsearch: " + e.getMessage());
+        }
         
         // 清除相关缓存
         clearPostRelatedCache(id);
@@ -143,6 +160,35 @@ public class PostService {
         }
         
         return postRepository.searchPosts(keyword.trim(), pageable);
+    }
+
+    // 使用 Elasticsearch 进行全文搜索
+    @Cacheable(value = "searchResults", key = "'es:' + #keyword + ':' + #page + ':' + #size")
+    public Page<Post> searchPostsEs(String keyword, int page, int size) {
+        if (page < 1) page = 1;
+        if (size < 1 || size > 100) size = 10;
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return postRepository.findAll(pageable);
+        }
+
+        Page<PostDocument> docPage = postSearchService.search(keyword.trim(), page, size);
+        List<Long> ids = docPage.getContent().stream().map(PostDocument::getId).collect(Collectors.toList());
+        List<Post> posts = postRepository.findAllById(ids);
+        // 保持与 ES 结果相同顺序
+        List<Post> ordered = ids.stream()
+            .map(id -> posts.stream().filter(p -> p.getId().equals(id)).findFirst().orElse(null))
+            .filter(p -> p != null)
+            .collect(Collectors.toList());
+        return new PageImpl<>(ordered, pageable, docPage.getTotalElements());
+    }
+
+    // 重新构建全部 Elasticsearch 索引
+    @CacheEvict(value = {"searchResults"}, allEntries = true)
+    public void reindexAllPosts() {
+        List<Post> posts = postRepository.findAll();
+        postSearchService.indexPosts(posts);
     }
     
     // 按标题搜索 - 带缓存

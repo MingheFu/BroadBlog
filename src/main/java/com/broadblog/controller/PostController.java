@@ -277,6 +277,47 @@ public class PostController {
         
         return ResponseEntity.ok(result);
     }
+
+    // 使用 Elasticsearch 的全文搜索
+    @GetMapping("/search/es")
+    public ResponseEntity<Map<String, Object>> searchPostsEs(
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Page<Post> pagePosts = postService.searchPostsEs(keyword, page, size);
+
+        List<PostDTO> postDTOs = pagePosts.getContent().stream()
+            .map(postMapper::toDTO)
+            .collect(Collectors.toList());
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("data", postDTOs);
+        result.put("currentPage", page);
+        result.put("pageSize", size);
+        result.put("totalElements", pagePosts.getTotalElements());
+        result.put("totalPages", pagePosts.getTotalPages());
+        result.put("first", pagePosts.isFirst());
+        result.put("last", pagePosts.isLast());
+        result.put("keyword", keyword);
+        result.put("engine", "elasticsearch");
+
+        return ResponseEntity.ok(result);
+    }
+
+    // 重新构建 Elasticsearch 索引（仅管理员）
+    @PostMapping("/search/es/reindex")
+    public ResponseEntity<Map<String, Object>> reindexAll() {
+        Long currentUserId = getCurrentUserId();
+        if (!userService.isAdmin(currentUserId)) {
+            return ResponseEntity.status(403).build();
+        }
+        postService.reindexAllPosts();
+        Map<String, Object> result = new HashMap<>();
+        result.put("status", "ok");
+        result.put("message", "reindex started");
+        return ResponseEntity.ok(result);
+    }
     
     // 按标题搜索
     @GetMapping("/search/title")
