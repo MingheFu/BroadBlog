@@ -25,6 +25,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.broadblog.dto.PostDTO;
 import com.broadblog.entity.Post;
 import com.broadblog.mapper.PostMapper;
+import com.broadblog.search.PostDocument;
+import com.broadblog.search.PostSearchService;
 import com.broadblog.security.CustomUserDetails;
 import com.broadblog.service.PostService;
 import com.broadblog.service.UserService;
@@ -37,12 +39,14 @@ public class PostController {
     private final PostService postService;
     private final PostMapper postMapper;
     private final UserService userService;
+    private final PostSearchService postSearchService;
 
     @Autowired
-    public PostController(PostService postService, PostMapper postMapper, UserService userService) {
+    public PostController(PostService postService, PostMapper postMapper, UserService userService, PostSearchService postSearchService) {
         this.postService = postService;
         this.postMapper = postMapper;
         this.userService = userService;
+        this.postSearchService = postSearchService;
     }
     
     // 辅助方法：获取当前登录用户
@@ -283,24 +287,40 @@ public class PostController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        Page<Post> pagePosts = postService.searchPostsEs(keyword, page, size);
+        try {
+            Page<PostDocument> docPage = postSearchService.search(keyword, page, size);
 
-        List<PostDTO> postDTOs = pagePosts.getContent().stream()
-            .map(postMapper::toDTO)
-            .collect(Collectors.toList());
+            // 直接返回ES搜索结果，避免实体转换问题
+            List<Map<String, Object>> postData = docPage.getContent().stream()
+                .map(doc -> {
+                    Map<String, Object> postMap = new HashMap<>();
+                    postMap.put("id", doc.getId());
+                    postMap.put("title", doc.getTitle());
+                    postMap.put("content", doc.getContent());
+                    postMap.put("authorId", doc.getAuthorId());
+                    postMap.put("tagNames", doc.getTagNames());
+                    postMap.put("createdAt", doc.getCreatedAt());
+                    postMap.put("updatedAt", doc.getUpdatedAt());
+                    return postMap;
+                })
+                .collect(Collectors.toList());
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("data", postDTOs);
-        result.put("currentPage", page);
-        result.put("pageSize", size);
-        result.put("totalElements", pagePosts.getTotalElements());
-        result.put("totalPages", pagePosts.getTotalPages());
-        result.put("first", pagePosts.isFirst());
-        result.put("last", pagePosts.isLast());
-        result.put("keyword", keyword);
-        result.put("engine", "elasticsearch");
+            Map<String, Object> result = new HashMap<>();
+            result.put("data", postData);
+            result.put("currentPage", page);
+            result.put("pageSize", size);
+            result.put("totalElements", docPage.getTotalElements());
+            result.put("totalPages", docPage.getTotalPages());
+            result.put("keyword", keyword);
+            result.put("engine", "elasticsearch");
 
-        return ResponseEntity.ok(result);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "ES search failed: " + e.getMessage());
+            error.put("engine", "elasticsearch");
+            return ResponseEntity.status(500).body(error);
+        }
     }
 
     // 重新构建 Elasticsearch 索引（仅管理员）
@@ -324,25 +344,42 @@ public class PostController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        Page<Post> pagePosts = postService.searchPostsByTagEs(tagName, page, size);
+        try {
+            Page<PostDocument> docPage = postSearchService.searchByTag(tagName, page, size);
 
-        List<PostDTO> postDTOs = pagePosts.getContent().stream()
-            .map(postMapper::toDTO)
-            .collect(Collectors.toList());
+            // 直接返回ES搜索结果，避免实体转换问题
+            List<Map<String, Object>> postData = docPage.getContent().stream()
+                .map(doc -> {
+                    Map<String, Object> postMap = new HashMap<>();
+                    postMap.put("id", doc.getId());
+                    postMap.put("title", doc.getTitle());
+                    postMap.put("content", doc.getContent());
+                    postMap.put("authorId", doc.getAuthorId());
+                    postMap.put("tagNames", doc.getTagNames());
+                    postMap.put("createdAt", doc.getCreatedAt());
+                    postMap.put("updatedAt", doc.getUpdatedAt());
+                    return postMap;
+                })
+                .collect(Collectors.toList());
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("data", postDTOs);
-        result.put("currentPage", page);
-        result.put("pageSize", size);
-        result.put("totalElements", pagePosts.getTotalElements());
-        result.put("totalPages", pagePosts.getTotalPages());
-        result.put("tagName", tagName);
-        result.put("engine", "elasticsearch");
-        result.put("searchType", "tag");
+            Map<String, Object> result = new HashMap<>();
+            result.put("data", postData);
+            result.put("currentPage", page);
+            result.put("pageSize", size);
+            result.put("totalElements", docPage.getTotalElements());
+            result.put("totalPages", docPage.getTotalPages());
+            result.put("tagName", tagName);
+            result.put("engine", "elasticsearch");
 
-        return ResponseEntity.ok(result);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "ES tag search failed: " + e.getMessage());
+            error.put("engine", "elasticsearch");
+            return ResponseEntity.status(500).body(error);
+        }
     }
-    
+
     // 使用 Elasticsearch 按作者搜索
     @GetMapping("/search/es/author")
     public ResponseEntity<Map<String, Object>> searchPostsByAuthorEs(
@@ -350,23 +387,40 @@ public class PostController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        Page<Post> pagePosts = postService.searchPostsByAuthorEs(authorId, page, size);
+        try {
+            Page<PostDocument> docPage = postSearchService.searchByAuthor(authorId, page, size);
 
-        List<PostDTO> postDTOs = pagePosts.getContent().stream()
-            .map(postMapper::toDTO)
-            .collect(Collectors.toList());
+            // 直接返回ES搜索结果，避免实体转换问题
+            List<Map<String, Object>> postData = docPage.getContent().stream()
+                .map(doc -> {
+                    Map<String, Object> postMap = new HashMap<>();
+                    postMap.put("id", doc.getId());
+                    postMap.put("title", doc.getTitle());
+                    postMap.put("content", doc.getContent());
+                    postMap.put("authorId", doc.getAuthorId());
+                    postMap.put("tagNames", doc.getTagNames());
+                    postMap.put("createdAt", doc.getCreatedAt());
+                    postMap.put("updatedAt", doc.getUpdatedAt());
+                    return postMap;
+                })
+                .collect(Collectors.toList());
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("data", postDTOs);
-        result.put("currentPage", page);
-        result.put("pageSize", size);
-        result.put("totalElements", pagePosts.getTotalElements());
-        result.put("totalPages", pagePosts.getTotalPages());
-        result.put("authorId", authorId);
-        result.put("engine", "elasticsearch");
-        result.put("searchType", "author");
+            Map<String, Object> result = new HashMap<>();
+            result.put("data", postData);
+            result.put("currentPage", page);
+            result.put("pageSize", size);
+            result.put("totalElements", docPage.getTotalElements());
+            result.put("totalPages", docPage.getTotalPages());
+            result.put("authorId", authorId);
+            result.put("engine", "elasticsearch");
 
-        return ResponseEntity.ok(result);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "ES author search failed: " + e.getMessage());
+            error.put("engine", "elasticsearch");
+            return ResponseEntity.status(500).body(error);
+        }
     }
     
     // 按标题搜索

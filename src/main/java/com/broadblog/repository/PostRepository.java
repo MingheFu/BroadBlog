@@ -39,4 +39,11 @@ public interface PostRepository extends JpaRepository<Post, Long> {
            "LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
            "LOWER(t.name) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     Page<Post> searchPosts(@Param("keyword") String keyword, Pageable pageable);
+    
+    // 根据ID列表查询帖子，预加载作者和标签信息
+    @Query("SELECT DISTINCT p FROM Post p " +
+           "LEFT JOIN FETCH p.author " +
+           "LEFT JOIN FETCH p.tags " +
+           "WHERE p.id IN :ids")
+    List<Post> findByIdInWithAuthorAndTags(@Param("ids") List<Long> ids);
 } 

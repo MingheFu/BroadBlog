@@ -19,6 +19,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.broadblog.entity.Post;
 import com.broadblog.entity.Tag;
@@ -170,6 +171,7 @@ public class PostService {
 
     // 使用 Elasticsearch 进行全文搜索
     @Cacheable(value = "searchResults", key = "'es:' + #keyword + ':' + #page + ':' + #size")
+    @Transactional(readOnly = true)
     public Page<Post> searchPostsEs(String keyword, int page, int size) {
         if (page < 1) page = 1;
         if (size < 1 || size > 100) size = 10;
@@ -192,8 +194,8 @@ public class PostService {
                 .map(PostDocument::getId)
                 .collect(Collectors.toList());
             
-            // 通过ID重新查询，使用专门的查询方法
-            List<Post> posts = postRepository.findAllById(ids);
+            // 使用JOIN FETCH预加载关联数据，避免懒加载问题
+            List<Post> posts = postRepository.findByIdInWithAuthorAndTags(ids);
             
             // 按ES结果顺序重新排列
             Map<Long, Post> postMap = posts.stream()
@@ -215,6 +217,7 @@ public class PostService {
     
     // 使用 Elasticsearch 按标签搜索
     @Cacheable(value = "searchResults", key = "'es_tag:' + #tagName + ':' + #page + ':' + #size")
+    @Transactional(readOnly = true)
     public Page<Post> searchPostsByTagEs(String tagName, int page, int size) {
         if (page < 1) page = 1;
         if (size < 1 || size > 100) size = 10;
@@ -224,19 +227,38 @@ public class PostService {
             return postRepository.findAll(pageable);
         }
 
-        Page<PostDocument> docPage = postSearchService.searchByTag(tagName.trim(), page, size);
-        List<Long> ids = docPage.getContent().stream().map(PostDocument::getId).collect(Collectors.toList());
-        List<Post> posts = postRepository.findAllById(ids);
-        // 保持与 ES 结果相同顺序
-        List<Post> ordered = ids.stream()
-            .map(id -> posts.stream().filter(p -> p.getId().equals(id)).findFirst().orElse(null))
-            .filter(p -> p != null)
-            .collect(Collectors.toList());
-        return new PageImpl<>(ordered, pageable, docPage.getTotalElements());
+        try {
+            Page<PostDocument> docPage = postSearchService.searchByTag(tagName.trim(), page, size);
+            
+            if (docPage.getContent().isEmpty()) {
+                return new PageImpl<>(List.of(), pageable, 0);
+            }
+            
+            List<Long> ids = docPage.getContent().stream()
+                .map(PostDocument::getId)
+                .collect(Collectors.toList());
+            
+            List<Post> posts = postRepository.findByIdInWithAuthorAndTags(ids);
+            
+            Map<Long, Post> postMap = posts.stream()
+                .collect(Collectors.toMap(Post::getId, post -> post));
+            
+            List<Post> orderedPosts = ids.stream()
+                .map(id -> postMap.get(id))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+            
+            return new PageImpl<>(orderedPosts, pageable, docPage.getTotalElements());
+            
+        } catch (Exception e) {
+            logger.warn("ES tag search failed for tag '{}', falling back to database search: {}", tagName, e.getMessage());
+            return searchByTag(tagName, page, size);
+        }
     }
     
     // 使用 Elasticsearch 按作者搜索
     @Cacheable(value = "searchResults", key = "'es_author:' + #authorId + ':' + #page + ':' + #size")
+    @Transactional(readOnly = true)
     public Page<Post> searchPostsByAuthorEs(Long authorId, int page, int size) {
         if (page < 1) page = 1;
         if (size < 1 || size > 100) size = 10;
@@ -246,15 +268,33 @@ public class PostService {
             return postRepository.findAll(pageable);
         }
 
-        Page<PostDocument> docPage = postSearchService.searchByAuthor(authorId, page, size);
-        List<Long> ids = docPage.getContent().stream().map(PostDocument::getId).collect(Collectors.toList());
-        List<Post> posts = postRepository.findAllById(ids);
-        // 保持与 ES 结果相同顺序
-        List<Post> ordered = ids.stream()
-            .map(id -> posts.stream().filter(p -> p.getId().equals(id)).findFirst().orElse(null))
-            .filter(p -> p != null)
-            .collect(Collectors.toList());
-        return new PageImpl<>(ordered, pageable, docPage.getTotalElements());
+        try {
+            Page<PostDocument> docPage = postSearchService.searchByAuthor(authorId, page, size);
+            
+            if (docPage.getContent().isEmpty()) {
+                return new PageImpl<>(List.of(), pageable, 0);
+            }
+            
+            List<Long> ids = docPage.getContent().stream()
+                .map(PostDocument::getId)
+                .collect(Collectors.toList());
+            
+            List<Post> posts = postRepository.findByIdInWithAuthorAndTags(ids);
+            
+            Map<Long, Post> postMap = posts.stream()
+                .collect(Collectors.toMap(Post::getId, post -> post));
+            
+            List<Post> orderedPosts = ids.stream()
+                .map(id -> postMap.get(id))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+            
+            return new PageImpl<>(orderedPosts, pageable, docPage.getTotalElements());
+            
+        } catch (Exception e) {
+            logger.warn("ES author search failed for author {}, falling back to database search: {}", authorId, e.getMessage());
+            return getPostsByAuthorIdWithPage(authorId, page, size);
+        }
     }
 
     // 重新构建全部 Elasticsearch 索引
@@ -315,14 +355,22 @@ public class PostService {
             return buildHotPostsCache(top);
         }
         
-        // 根据ID列表获取文章详情
-        List<Post> hotPosts = hotPostIds.stream()
-            .map(id -> postRepository.findById(Long.valueOf(id.toString())))
-            .filter(Optional::isPresent)
-            .map(Optional::get)
+        // 根据ID列表获取文章详情，使用JOIN FETCH避免懒加载
+        List<Long> ids = hotPostIds.stream()
+            .map(id -> Long.valueOf(id.toString()))
             .collect(Collectors.toList());
         
-        return hotPosts;
+        try {
+            return postRepository.findByIdInWithAuthorAndTags(ids);
+        } catch (Exception e) {
+            logger.warn("Failed to get hot posts with JOIN FETCH, falling back to simple query: {}", e.getMessage());
+            // 降级到简单查询
+            return hotPostIds.stream()
+                .map(id -> postRepository.findById(Long.valueOf(id.toString())))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .collect(Collectors.toList());
+        }
     }
     
     /**
