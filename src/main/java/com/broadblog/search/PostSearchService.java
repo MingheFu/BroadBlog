@@ -41,7 +41,7 @@ public class PostSearchService {
         if (page < 1) page = 1;
         if (size < 1 || size > 100) size = 10;
         Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return postSearchRepository.findByTitleContainingOrContentContaining(keyword, keyword, pageable);
+        return postSearchRepository.searchByKeyword(keyword, pageable);
     }
 
     private PostDocument mapToDocument(Post post) {

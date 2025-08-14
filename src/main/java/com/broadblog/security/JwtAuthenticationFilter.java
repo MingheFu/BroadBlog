@@ -36,13 +36,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String username = null;
         String jwtToken = null;
 
-        // JWT Token is in the form "Bearer token". Remove Bearer word and get only the Token
-        if (requestTokenHeader != null && requestTokenHeader.startsWith("Bearer ")) {
-            jwtToken = requestTokenHeader.substring(7);
-            try {
-                username = jwtTokenUtil.extractUsername(jwtToken);
-            } catch (Exception e) {
-                logger.error("Unable to get JWT Token or token is invalid", e);
+        // JWT Token is in the form "Bearer token" (case-insensitive). Trim extra spaces.
+        if (requestTokenHeader != null) {
+            String header = requestTokenHeader.trim();
+            if (header.regionMatches(true, 0, "Bearer ", 0, 7) && header.length() > 7) {
+                jwtToken = header.substring(7).trim();
+                try {
+                    username = jwtTokenUtil.extractUsername(jwtToken);
+                } catch (Exception e) {
+                    logger.error("Unable to get JWT Token or token is invalid", e);
+                }
             }
         }
 
