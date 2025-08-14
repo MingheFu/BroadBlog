@@ -2,10 +2,14 @@ package com.broadblog.service;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -26,6 +30,8 @@ import com.broadblog.search.PostSearchService;
 
 @Service
 public class PostService {
+
+    private static final Logger logger = LoggerFactory.getLogger(PostService.class);
 
     private final PostRepository postRepository;
     private final UserRepository userRepository;
@@ -173,7 +179,74 @@ public class PostService {
             return postRepository.findAll(pageable);
         }
 
-        Page<PostDocument> docPage = postSearchService.search(keyword.trim(), page, size);
+        try {
+            // 获取ES搜索结果
+            Page<PostDocument> docPage = postSearchService.search(keyword.trim(), page, size);
+            
+            if (docPage.getContent().isEmpty()) {
+                return new PageImpl<>(List.of(), pageable, 0);
+            }
+            
+            // 只获取ID列表，避免序列化问题
+            List<Long> ids = docPage.getContent().stream()
+                .map(PostDocument::getId)
+                .collect(Collectors.toList());
+            
+            // 通过ID重新查询，使用专门的查询方法
+            List<Post> posts = postRepository.findAllById(ids);
+            
+            // 按ES结果顺序重新排列
+            Map<Long, Post> postMap = posts.stream()
+                .collect(Collectors.toMap(Post::getId, post -> post));
+            
+            List<Post> orderedPosts = ids.stream()
+                .map(id -> postMap.get(id))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+            
+            return new PageImpl<>(orderedPosts, pageable, docPage.getTotalElements());
+            
+        } catch (Exception e) {
+            // 如果ES搜索失败，降级到数据库搜索
+            logger.warn("ES search failed for keyword '{}', falling back to database search: {}", keyword, e.getMessage());
+            return searchPosts(keyword, page, size);
+        }
+    }
+    
+    // 使用 Elasticsearch 按标签搜索
+    @Cacheable(value = "searchResults", key = "'es_tag:' + #tagName + ':' + #page + ':' + #size")
+    public Page<Post> searchPostsByTagEs(String tagName, int page, int size) {
+        if (page < 1) page = 1;
+        if (size < 1 || size > 100) size = 10;
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        if (tagName == null || tagName.trim().isEmpty()) {
+            return postRepository.findAll(pageable);
+        }
+
+        Page<PostDocument> docPage = postSearchService.searchByTag(tagName.trim(), page, size);
+        List<Long> ids = docPage.getContent().stream().map(PostDocument::getId).collect(Collectors.toList());
+        List<Post> posts = postRepository.findAllById(ids);
+        // 保持与 ES 结果相同顺序
+        List<Post> ordered = ids.stream()
+            .map(id -> posts.stream().filter(p -> p.getId().equals(id)).findFirst().orElse(null))
+            .filter(p -> p != null)
+            .collect(Collectors.toList());
+        return new PageImpl<>(ordered, pageable, docPage.getTotalElements());
+    }
+    
+    // 使用 Elasticsearch 按作者搜索
+    @Cacheable(value = "searchResults", key = "'es_author:' + #authorId + ':' + #page + ':' + #size")
+    public Page<Post> searchPostsByAuthorEs(Long authorId, int page, int size) {
+        if (page < 1) page = 1;
+        if (size < 1 || size > 100) size = 10;
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        if (authorId == null) {
+            return postRepository.findAll(pageable);
+        }
+
+        Page<PostDocument> docPage = postSearchService.searchByAuthor(authorId, page, size);
         List<Long> ids = docPage.getContent().stream().map(PostDocument::getId).collect(Collectors.toList());
         List<Post> posts = postRepository.findAllById(ids);
         // 保持与 ES 结果相同顺序

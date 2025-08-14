@@ -271,8 +271,6 @@ public class PostController {
         result.put("pageSize", size);
         result.put("totalElements", pagePosts.getTotalElements());
         result.put("totalPages", pagePosts.getTotalPages());
-        result.put("first", pagePosts.isFirst());
-        result.put("last", pagePosts.isLast());
         result.put("keyword", keyword);
         
         return ResponseEntity.ok(result);
@@ -316,6 +314,58 @@ public class PostController {
         Map<String, Object> result = new HashMap<>();
         result.put("status", "ok");
         result.put("message", "reindex started");
+        return ResponseEntity.ok(result);
+    }
+    
+    // 使用 Elasticsearch 按标签搜索
+    @GetMapping("/search/es/tag")
+    public ResponseEntity<Map<String, Object>> searchPostsByTagEs(
+            @RequestParam String tagName,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Page<Post> pagePosts = postService.searchPostsByTagEs(tagName, page, size);
+
+        List<PostDTO> postDTOs = pagePosts.getContent().stream()
+            .map(postMapper::toDTO)
+            .collect(Collectors.toList());
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("data", postDTOs);
+        result.put("currentPage", page);
+        result.put("pageSize", size);
+        result.put("totalElements", pagePosts.getTotalElements());
+        result.put("totalPages", pagePosts.getTotalPages());
+        result.put("tagName", tagName);
+        result.put("engine", "elasticsearch");
+        result.put("searchType", "tag");
+
+        return ResponseEntity.ok(result);
+    }
+    
+    // 使用 Elasticsearch 按作者搜索
+    @GetMapping("/search/es/author")
+    public ResponseEntity<Map<String, Object>> searchPostsByAuthorEs(
+            @RequestParam Long authorId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Page<Post> pagePosts = postService.searchPostsByAuthorEs(authorId, page, size);
+
+        List<PostDTO> postDTOs = pagePosts.getContent().stream()
+            .map(postMapper::toDTO)
+            .collect(Collectors.toList());
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("data", postDTOs);
+        result.put("currentPage", page);
+        result.put("pageSize", size);
+        result.put("totalElements", pagePosts.getTotalElements());
+        result.put("totalPages", pagePosts.getTotalPages());
+        result.put("authorId", authorId);
+        result.put("engine", "elasticsearch");
+        result.put("searchType", "author");
+
         return ResponseEntity.ok(result);
     }
     
