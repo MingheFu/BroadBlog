@@ -67,7 +67,7 @@ public class CommentController {
         try {
             // 获取当前登录用户ID
             Long currentUserId = getCurrentUserId();
-            commentDTO.setAuthorId(currentUserId); // 强制设置作者为当前登录用户
+            commentDTO.setAuthorId(currentUserId.toString()); // 强制设置作者为当前登录用户
             
             Comment comment = commentMapper.toEntity(commentDTO);
             comment.setCreatedAt(LocalDateTime.now());
@@ -97,8 +97,8 @@ public class CommentController {
     }
     
     @GetMapping("/author/{authorId}")
-    public ResponseEntity<List<CommentDTO>> getCommentsByAuthorId(@PathVariable Long authorId) {
-        List<Comment> comments = commentService.getCommentsByAuthorId(authorId);
+    public ResponseEntity<List<CommentDTO>> getCommentsByAuthorId(@PathVariable String authorId) {
+        List<Comment> comments = commentService.getCommentsByAuthorId(Long.valueOf(authorId));
         List<CommentDTO> commentDTOs = comments.stream()
             .map(commentMapper::toDTO)
             .collect(Collectors.toList());
@@ -106,8 +106,8 @@ public class CommentController {
     }
     
     @GetMapping("/post/{postId}")
-    public ResponseEntity<List<CommentDTO>> getCommentsByPostId(@PathVariable Long postId) {
-        List<Comment> comments = commentService.getCommentsByPostId(postId);
+    public ResponseEntity<List<CommentDTO>> getCommentsByPostId(@PathVariable String postId) {
+        List<Comment> comments = commentService.getCommentsByPostId(Long.valueOf(postId));
         List<CommentDTO> commentDTOs = comments.stream()
             .map(commentMapper::toDTO)
             .collect(Collectors.toList());

@@ -1,10 +1,11 @@
 package com.broadblog.mapper;
 
+import org.springframework.stereotype.Component;
+
 import com.broadblog.dto.CommentDTO;
 import com.broadblog.entity.Comment;
-import com.broadblog.entity.User;
 import com.broadblog.entity.Post;
-import org.springframework.stereotype.Component;
+import com.broadblog.entity.User;
 
 @Component
 public class CommentMapper {
@@ -17,12 +18,12 @@ public class CommentMapper {
         dto.setUpdatedAt(comment.getUpdatedAt());
         
         if (comment.getAuthor() != null) {
-            dto.setAuthorId(comment.getAuthor().getId());
+            dto.setAuthorId(comment.getAuthor().getId().toString());
             dto.setAuthorName(comment.getAuthor().getUsername());
         }
         
         if (comment.getPost() != null) {
-            dto.setPostId(comment.getPost().getId());
+            dto.setPostId(comment.getPost().getId().toString());
             dto.setPostTitle(comment.getPost().getTitle());
         }
         
@@ -38,14 +39,14 @@ public class CommentMapper {
         // Set author relationship
         if (dto.getAuthorId() != null) {
             User author = new User();
-            author.setId(dto.getAuthorId());
+            author.setId(Long.valueOf(dto.getAuthorId()));
             comment.setAuthor(author);
         }
         
         // Set post relationship
         if (dto.getPostId() != null) {
             Post post = new Post();
-            post.setId(dto.getPostId());
+            post.setId(Long.valueOf(dto.getPostId()));
             comment.setPost(post);
         }
         

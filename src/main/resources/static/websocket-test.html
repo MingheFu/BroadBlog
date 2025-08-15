@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket 实时评论测试</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .comment-section {
+            grid-column: 1 / -1;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .message {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .message-author {
+            font-weight: 600;
+            color: #007bff;
+        }
+        .message-time {
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .message-content {
+            color: #333;
+        }
+        .notification {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .notification.unread {
+            background: #d1ecf1;
+            border-color: #bee5eb;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            background: #e9ecef;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px 4px 0 0;
+            margin-right: 5px;
+        }
+        .tab.active {
+            background: #007bff;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <h1>WebSocket 实时评论和通知测试</h1>
+    
+    <div class="status disconnected" id="connectionStatus">
+        未连接
+    </div>
+    
+    <div class="tabs">
+        <button class="tab active" onclick="showTab('comment')">评论测试</button>
+        <button class="tab" onclick="showTab('notification')">通知测试</button>
+        <button class="tab" onclick="showTab('chat')">聊天测试</button>
+    </div>
+    
+    <!-- 评论测试 -->
+    <div id="commentTab" class="tab-content active">
+        <div class="card">
+            <h3>发送评论</h3>
+            <div class="form-group">
+                <label for="commentAuthor">作者姓名:</label>
+                <input type="text" id="commentAuthor" value="测试用户">
+            </div>
+            <div class="form-group">
+                <label for="commentContent">评论内容:</label>
+                <textarea id="commentContent" rows="3" placeholder="输入评论内容..."></textarea>
+            </div>
+            <div class="form-group">
+                <label for="commentPostId">文章ID:</label>
+                <input type="text" id="commentPostId" value="post-001">
+            </div>
+            <div class="form-group">
+                <label for="commentPostTitle">文章标题:</label>
+                <input type="text" id="commentPostTitle" value="测试文章">
+            </div>
+            <button onclick="sendComment()">发送评论</button>
+            <button onclick="sendCommentReply()">发送回复</button>
+            <button onclick="sendCommentLike()">发送点赞</button>
+        </div>
+        
+        <div class="card">
+            <h3>实时评论</h3>
+            <div id="commentMessages"></div>
+        </div>
+    </div>
+    
+    <!-- 通知测试 -->
+    <div id="notificationTab" class="tab-content">
+        <div class="card">
+            <h3>发送通知</h3>
+            <div class="form-group">
+                <label for="notificationTitle">通知标题:</label>
+                <input type="text" id="notificationTitle" value="测试通知">
+            </div>
+            <div class="form-group">
+                <label for="notificationContent">通知内容:</label>
+                <textarea id="notificationContent" rows="3" placeholder="输入通知内容..."></textarea>
+            </div>
+            <div class="form-group">
+                <label for="notificationUserId">接收用户ID:</label>
+                <input type="text" id="notificationUserId" value="user-001">
+            </div>
+            <button onclick="sendPersonalNotification()">发送个人通知</button>
+            <button onclick="sendBroadcastNotification()">发送广播通知</button>
+        </div>
+        
+        <div class="card">
+            <h3>实时通知</h3>
+            <div id="notificationMessages"></div>
+        </div>
+    </div>
+    
+    <!-- 聊天测试 -->
+    <div id="chatTab" class="tab-content">
+        <div class="card">
+            <h3>加入聊天</h3>
+            <div class="form-group">
+                <label for="chatUsername">用户名:</label>
+                <input type="text" id="chatUsername" value="聊天用户">
+            </div>
+            <button onclick="joinChat()">加入聊天</button>
+        </div>
+        
+        <div class="card">
+            <h3>聊天消息</h3>
+            <div id="chatMessages"></div>
+        </div>
+    </div>
+
+    <script>
+        let stompClient = null;
+        let isConnected = false;
+
+        // 连接 WebSocket
+        function connect() {
+            const socket = new SockJS('/ws');
+            stompClient = Stomp.over(socket);
+            
+            stompClient.connect({}, function (frame) {
+                console.log('Connected: ' + frame);
+                isConnected = true;
+                updateConnectionStatus();
+                subscribeToTopics();
+            }, function (error) {
+                console.log('Error: ' + error);
+                isConnected = false;
+                updateConnectionStatus();
+            });
+        }
+
+        // 更新连接状态
+        function updateConnectionStatus() {
+            const status = document.getElementById('connectionStatus');
+            if (isConnected) {
+                status.textContent = '已连接';
+                status.className = 'status connected';
+            } else {
+                status.textContent = '未连接';
+                status.className = 'status disconnected';
+            }
+        }
+
+        // 订阅主题
+        function subscribeToTopics() {
+            // 订阅评论主题
+            stompClient.subscribe('/topic/comments', function (message) {
+                const comment = JSON.parse(message.body);
+                displayComment(comment);
+            });
+
+            // 订阅特定帖子的评论
+            stompClient.subscribe('/topic/post/post-001/comments', function (message) {
+                const comment = JSON.parse(message.body);
+                displayComment(comment, '特定帖子评论');
+            });
+
+            // 订阅通知主题
+            stompClient.subscribe('/topic/notifications', function (message) {
+                const notification = JSON.parse(message.body);
+                displayNotification(notification, '广播通知');
+            });
+
+            // 订阅个人通知队列
+            stompClient.subscribe('/user/queue/notifications', function (message) {
+                const notification = JSON.parse(message.body);
+                displayNotification(notification, '个人通知');
+            });
+
+            // 订阅聊天主题
+            stompClient.subscribe('/topic/public', function (message) {
+                const chatMessage = JSON.parse(message.body);
+                displayChatMessage(chatMessage);
+            });
+        }
+
+        // 发送评论
+        function sendComment() {
+            if (!isConnected) {
+                alert('请先连接 WebSocket');
+                return;
+            }
+
+            const comment = {
+                content: document.getElementById('commentContent').value,
+                authorId: 'user-001',
+                authorName: document.getElementById('commentAuthor').value,
+                authorAvatar: '/images/avatar.png',
+                postId: document.getElementById('commentPostId').value,
+                postTitle: document.getElementById('commentPostTitle').value,
+                type: 'NEW_COMMENT'
+            };
+
+            stompClient.send("/app/comment", {}, JSON.stringify(comment));
+            document.getElementById('commentContent').value = '';
+        }
+
+        // 发送评论回复
+        function sendCommentReply() {
+            if (!isConnected) {
+                alert('请先连接 WebSocket');
+                return;
+            }
+
+            const reply = {
+                content: document.getElementById('commentContent').value,
+                authorId: 'user-002',
+                authorName: document.getElementById('commentAuthor').value,
+                authorAvatar: '/images/avatar.png',
+                postId: document.getElementById('commentPostId').value,
+                postTitle: document.getElementById('commentPostTitle').value,
+                type: 'COMMENT_REPLY'
+            };
+
+            stompClient.send("/app/comment/reply", {}, JSON.stringify(reply));
+            document.getElementById('commentContent').value = '';
+        }
+
+        // 发送评论点赞
+        function sendCommentLike() {
+            if (!isConnected) {
+                alert('请先连接 WebSocket');
+                return;
+            }
+
+            const like = {
+                content: '点赞了评论',
+                authorId: 'user-003',
+                authorName: document.getElementById('commentAuthor').value,
+                authorAvatar: '/images/avatar.png',
+                postId: document.getElementById('commentPostId').value,
+                postTitle: document.getElementById('commentPostTitle').value,
+                type: 'COMMENT_LIKE'
+            };
+
+            stompClient.send("/app/comment/like", {}, JSON.stringify(like));
+        }
+
+        // 发送个人通知
+        function sendPersonalNotification() {
+            if (!isConnected) {
+                alert('请先连接 WebSocket');
+                return;
+            }
+
+            // 这里需要通过后端 API 发送，前端无法直接发送到用户队列
+            alert('个人通知需要通过后端 API 发送');
+        }
+
+        // 发送广播通知
+        function sendBroadcastNotification() {
+            if (!isConnected) {
+                alert('请先连接 WebSocket');
+                return;
+            }
+
+            // 这里需要通过后端 API 发送
+            alert('广播通知需要通过后端 API 发送');
+        }
+
+        // 加入聊天
+        function joinChat() {
+            if (!isConnected) {
+                alert('请先连接 WebSocket');
+                return;
+            }
+
+            const chatMessage = {
+                content: document.getElementById('chatUsername').value + ' 加入了聊天',
+                authorId: 'user-001',
+                authorName: document.getElementById('chatUsername').value,
+                authorAvatar: '/images/avatar.png',
+                postId: 'chat',
+                postTitle: '聊天室',
+                type: 'NEW_COMMENT'
+            };
+
+            stompClient.send("/app/chat.join", {}, JSON.stringify(chatMessage));
+        }
+
+        // 显示评论
+        function displayComment(comment, prefix = '') {
+            const container = document.getElementById('commentMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message';
+            
+            const time = new Date().toLocaleTimeString();
+            messageDiv.innerHTML = `
+                <div class="message-header">
+                    <span class="message-author">${prefix ? prefix + ': ' : ''}${comment.authorName}</span>
+                    <span class="message-time">${time}</span>
+                </div>
+                <div class="message-content">${comment.content}</div>
+                <div class="message-content"><small>文章: ${comment.postTitle}</small></div>
+            `;
+            
+            container.insertBefore(messageDiv, container.firstChild);
+        }
+
+        // 显示通知
+        function displayNotification(notification, prefix = '') {
+            const container = document.getElementById('notificationMessages');
+            const notificationDiv = document.createElement('div');
+            notificationDiv.className = 'notification unread';
+            
+            const time = new Date().toLocaleTimeString();
+            notificationDiv.innerHTML = `
+                <div class="message-header">
+                    <span class="message-author">${prefix ? prefix + ': ' : ''}${notification.title}</span>
+                    <span class="message-time">${time}</span>
+                </div>
+                <div class="message-content">${notification.content}</div>
+            `;
+            
+            container.insertBefore(notificationDiv, container.firstChild);
+        }
+
+        // 显示聊天消息
+        function displayChatMessage(chatMessage) {
+            const container = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message';
+            
+            const time = new Date().toLocaleTimeString();
+            messageDiv.innerHTML = `
+                <div class="message-header">
+                    <span class="message-author">${chatMessage.authorName}</span>
+                    <span class="message-time">${time}</span>
+                </div>
+                <div class="message-content">${chatMessage.content}</div>
+            `;
+            
+            container.insertBefore(messageDiv, container.firstChild);
+        }
+
+        // 切换标签页
+        function showTab(tabName) {
+            // 隐藏所有标签页内容
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(content => content.classList.remove('active'));
+            
+            // 移除所有标签页的激活状态
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // 显示选中的标签页
+            document.getElementById(tabName + 'Tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // 页面加载完成后连接 WebSocket
+        window.onload = function() {
+            connect();
+        };
+
+        // 页面关闭时断开连接
+        window.onbeforeunload = function() {
+            if (stompClient) {
+                stompClient.disconnect();
+            }
+        };
+    </script>
+</body>
+</html>

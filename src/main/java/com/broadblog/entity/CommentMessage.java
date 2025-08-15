@@ -1,39 +1,75 @@
-package com.broadblog.dto;
+package com.broadblog.entity;
 
 import java.time.LocalDateTime;
 
-public class CommentDTO {
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+
+@Entity
+@Table(name = "comment_messages")
+public class CommentMessage {
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    
+    @Column(columnDefinition = "TEXT")
     private String content;
+    
+    @Column(name = "author_id")
     private String authorId;
+    
+    @Column(name = "author_name")
     private String authorName;
+    
+    @Column(name = "author_avatar")
     private String authorAvatar;
+    
+    @Column(name = "post_id")
     private String postId;
+    
+    @Column(name = "post_title")
     private String postTitle;
+    
+    @Column(name = "created_at")
     private LocalDateTime createdAt;
-    private String type;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "message_type")
+    private MessageType type;
+    
+    @Column(name = "parent_comment_id")
     private Long parentCommentId;
-    private boolean isDeleted;
-    private LocalDateTime updatedAt;
+    
+    @Column(name = "is_deleted")
+    private boolean isDeleted = false;
+
+    public enum MessageType {
+        NEW_COMMENT,
+        COMMENT_REPLY,
+        COMMENT_LIKE,
+        COMMENT_DELETE
+    }
 
     // 构造函数
-    public CommentDTO() {}
+    public CommentMessage() {}
 
-    public CommentDTO(Long id, String content, String authorId, String authorName, String authorAvatar,
-                     String postId, String postTitle, LocalDateTime createdAt, String type, 
-                     Long parentCommentId, boolean isDeleted, LocalDateTime updatedAt) {
-        this.id = id;
+    public CommentMessage(String content, String authorId, String authorName, String authorAvatar, 
+                        String postId, String postTitle, MessageType type) {
         this.content = content;
         this.authorId = authorId;
         this.authorName = authorName;
         this.authorAvatar = authorAvatar;
         this.postId = postId;
         this.postTitle = postTitle;
-        this.createdAt = createdAt;
         this.type = type;
-        this.parentCommentId = parentCommentId;
-        this.isDeleted = isDeleted;
-        this.updatedAt = updatedAt;
+        this.createdAt = LocalDateTime.now();
     }
 
     // Getter 和 Setter 方法
@@ -101,11 +137,11 @@ public class CommentDTO {
         this.createdAt = createdAt;
     }
 
-    public String getType() {
+    public MessageType getType() {
         return type;
     }
 
-    public void setType(String type) {
+    public void setType(MessageType type) {
         this.type = type;
     }
 
@@ -122,14 +158,6 @@ public class CommentDTO {
     }
 
     public void setDeleted(boolean deleted) {
-        this.isDeleted = deleted;
+        isDeleted = deleted;
     }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-} 
+}
