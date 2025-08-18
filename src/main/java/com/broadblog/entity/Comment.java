@@ -35,6 +35,10 @@ public class Comment {
     @JoinColumn(name = "post_id", nullable = false)
     private Post post;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_comment_id")
+    private Comment parentComment;
+
     // Getters and Setters
     public Long getId() {
         return id;
@@ -82,5 +86,13 @@ public class Comment {
 
     public void setPost(Post post) {
         this.post = post;
+    }
+
+    public Comment getParentComment() {
+        return parentComment;
+    }
+
+    public void setParentComment(Comment parentComment) {
+        this.parentComment = parentComment;
     }
 } 

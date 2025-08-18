@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -47,6 +48,16 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .userDetailsService(customUserDetailsService)  // 配置用户详情服务
             .authorizeHttpRequests(authz -> authz
+                // 允许静态资源与测试页匿名访问
+                .requestMatchers("/", "/index.html", "/websocket-test.html", "/favicon.ico").permitAll()
+                .requestMatchers("/static/**", "/public/**", "/resources/**", "/webjars/**", 
+                                 "/assets/**", "/css/**", "/js/**", "/images/**").permitAll()
+                // 使用 Spring Boot 提供的静态资源匹配（兼容 PathPatternParser）
+                .requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll()
+                // 允许 WebSocket/SockJS 握手与探活
+                .requestMatchers("/ws/**").permitAll()
+                // 允许预检请求
+                .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()  // 认证端点允许所有访问
                 .requestMatchers("/api/users/register").permitAll()  // 注册端点允许所有访问
                 .requestMatchers("/api/files/avatar/**").permitAll()  // 头像文件允许所有访问

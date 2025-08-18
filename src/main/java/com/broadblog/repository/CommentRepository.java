@@ -9,6 +9,6 @@ import com.broadblog.entity.Comment;
 public interface CommentRepository extends JpaRepository<Comment, Long> {
     List<Comment> findByAuthorId(Long authorId);
     List<Comment> findByPostId(Long postId);
-    List<Comment> findByParentCommentId(Long parentCommentId);
+    List<Comment> findByParentComment_Id(Long parentCommentId);
     long countByPostId(Long postId);
 } 

@@ -22,7 +22,7 @@ public class NotificationService {
         if (!postAuthorId.equals(comment.getAuthor().getId().toString())) {
             NotificationMessage notification = new NotificationMessage(
                 "new comment",
-                comment.getAuthor().getUsername() + " comment your post" + comment.getPost().getTitle(),
+                comment.getAuthor().getUsername() + " comment your post《" + comment.getPost().getTitle() + "》",
                 postAuthorId,
                 comment.getAuthor().getId().toString(),
                 comment.getAuthor().getUsername(),

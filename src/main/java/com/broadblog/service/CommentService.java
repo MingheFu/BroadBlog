@@ -110,7 +110,7 @@ public class CommentService {
      * 获取评论回复列表
      */
     public List<Comment> getCommentReplies(Long parentCommentId) {
-        return commentRepository.findByParentCommentId(parentCommentId);
+        return commentRepository.findByParentComment_Id(parentCommentId);
     }
 
     /**
@@ -181,7 +181,7 @@ public class CommentService {
             entity.getPost() != null ? entity.getPost().getTitle() : null,
             entity.getCreatedAt(),
             "NEW_COMMENT", // 默认类型
-            null, // parentCommentId
+            entity.getParentComment() != null ? entity.getParentComment().getId() : null,
             false, // isDeleted
             entity.getUpdatedAt()
         );

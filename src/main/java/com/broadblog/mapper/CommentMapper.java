@@ -26,6 +26,10 @@ public class CommentMapper {
             dto.setPostId(comment.getPost().getId().toString());
             dto.setPostTitle(comment.getPost().getTitle());
         }
+
+        if (comment.getParentComment() != null) {
+            dto.setParentCommentId(comment.getParentComment().getId());
+        }
         
         return dto;
     }
@@ -48,6 +52,13 @@ public class CommentMapper {
             Post post = new Post();
             post.setId(Long.valueOf(dto.getPostId()));
             comment.setPost(post);
+        }
+
+        // Set parent comment relationship
+        if (dto.getParentCommentId() != null) {
+            Comment parent = new Comment();
+            parent.setId(dto.getParentCommentId());
+            comment.setParentComment(parent);
         }
         
         return comment;
