@@ -21,8 +21,8 @@ public class NotificationService {
     public void sendNewCommentNotification(String postAuthorId, Comment comment) {
         if (!postAuthorId.equals(comment.getAuthor().getId().toString())) {
             NotificationMessage notification = new NotificationMessage(
-                "新评论",
-                comment.getAuthor().getUsername() + " 评论了你的文章《" + comment.getPost().getTitle() + "》",
+                "new comment",
+                comment.getAuthor().getUsername() + " comment your post《" + comment.getPost().getTitle() + "》",
                 postAuthorId,
                 comment.getAuthor().getId().toString(),
                 comment.getAuthor().getUsername(),
@@ -41,8 +41,8 @@ public class NotificationService {
     public void sendCommentReplyNotification(String commentAuthorId, Comment reply) {
         if (!commentAuthorId.equals(reply.getAuthor().getId().toString())) {
             NotificationMessage notification = new NotificationMessage(
-                "评论回复",
-                reply.getAuthor().getUsername() + " 回复了你的评论",
+                "comment reply",
+                reply.getAuthor().getUsername() + " reply your comment",
                 commentAuthorId,
                 reply.getAuthor().getId().toString(),
                 reply.getAuthor().getUsername(),
@@ -62,8 +62,8 @@ public class NotificationService {
                                    String likerAvatar, String targetType, String targetId, String targetTitle) {
         if (!targetUserId.equals(likerId)) {
             NotificationMessage notification = new NotificationMessage(
-                "新点赞",
-                likerName + " 点赞了你的" + targetType,
+                "new like",
+                likerName + " like your " + targetType,
                 targetUserId,
                 likerId,
                 likerName,
@@ -83,8 +83,8 @@ public class NotificationService {
                                           String followerName, String followerAvatar) {
         if (!followedUserId.equals(followerId)) {
             NotificationMessage notification = new NotificationMessage(
-                "新关注者",
-                followerName + " 关注了你",
+                "new follower",
+                followerName + " follow you",
                 followedUserId,
                 followerId,
                 followerName,
@@ -105,8 +105,8 @@ public class NotificationService {
                                       String postId, String postTitle) {
         if (!mentionedUserId.equals(mentionerId)) {
             NotificationMessage notification = new NotificationMessage(
-                "提及通知",
-                mentionerName + " 在文章《" + postTitle + "》中提到了你",
+                "mention notification",
+                mentionerName + " mention you in post《" + postTitle + "》",
                 mentionedUserId,
                 mentionerId,
                 mentionerName,
@@ -128,7 +128,7 @@ public class NotificationService {
             content,
             userId,
             "system",
-            "系统",
+            "system",
             "/images/system-avatar.png",
             targetUrl,
             NotificationMessage.NotificationType.SYSTEM_NOTIFICATION
@@ -146,7 +146,7 @@ public class NotificationService {
             content,
             "all",
             "system",
-            "系统",
+            "system",
             "/images/system-avatar.png",
             targetUrl,
             NotificationMessage.NotificationType.SYSTEM_NOTIFICATION

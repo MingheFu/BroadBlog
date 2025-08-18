@@ -1,14 +1,23 @@
 package com.broadblog.controller;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.broadblog.entity.NotificationMessage;
+import com.broadblog.repository.NotificationMessageRepository;
 import com.broadblog.service.NotificationService;
 
 @RestController
@@ -16,9 +25,134 @@ import com.broadblog.service.NotificationService;
 public class NotificationApiController {
 
     private final NotificationService notificationService;
+    private final NotificationMessageRepository notificationMessageRepository;
 
-    public NotificationApiController(NotificationService notificationService) {
+    public NotificationApiController(NotificationService notificationService, 
+                                   NotificationMessageRepository notificationMessageRepository) {
         this.notificationService = notificationService;
+        this.notificationMessageRepository = notificationMessageRepository;
+    }
+
+    /**
+     * 获取用户的通知列表
+     */
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<Map<String, Object>> getUserNotifications(
+            @PathVariable String userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        try {
+            List<NotificationMessage> notifications = notificationMessageRepository
+                .findByRecipientIdOrderByCreatedAtDesc(userId);
+            
+            // 简单的分页实现
+            int start = page * size;
+            int end = Math.min(start + size, notifications.size());
+            List<NotificationMessage> pageNotifications = notifications.subList(start, end);
+            
+            // 统计未读数量
+            long unreadCount = notificationMessageRepository.countByRecipientIdAndIsReadFalse(userId);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("notifications", pageNotifications);
+            response.put("currentPage", page);
+            response.put("pageSize", size);
+            response.put("totalElements", notifications.size());
+            response.put("totalPages", (int) Math.ceil((double) notifications.size() / size));
+            response.put("unreadCount", unreadCount);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "获取通知失败: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(error);
+        }
+    }
+
+    /**
+     * 获取用户的未读通知
+     */
+    @GetMapping("/user/{userId}/unread")
+    public ResponseEntity<List<NotificationMessage>> getUnreadNotifications(@PathVariable String userId) {
+        try {
+            List<NotificationMessage> unreadNotifications = notificationMessageRepository
+                .findByRecipientIdAndIsReadFalseOrderByCreatedAtDesc(userId);
+            return ResponseEntity.ok(unreadNotifications);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * 标记通知为已读
+     */
+    @PutMapping("/{id}/read")
+    public ResponseEntity<Map<String, String>> markAsRead(@PathVariable Long id) {
+        try {
+            notificationMessageRepository.markAsRead(id);
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "通知已标记为已读");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "标记已读失败: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(error);
+        }
+    }
+
+    /**
+     * 批量标记用户的所有通知为已读
+     */
+    @PutMapping("/user/{userId}/read-all")
+    public ResponseEntity<Map<String, String>> markAllAsRead(@PathVariable String userId) {
+        try {
+            notificationMessageRepository.markAllAsRead(userId);
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "所有通知已标记为已读");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "批量标记已读失败: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(error);
+        }
+    }
+
+    /**
+     * 删除单个通知
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Map<String, String>> deleteNotification(@PathVariable Long id) {
+        try {
+            notificationMessageRepository.deleteById(id);
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "通知已删除");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "删除通知失败: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(error);
+        }
+    }
+
+    /**
+     * 删除用户的所有通知
+     */
+    @DeleteMapping("/user/{userId}")
+    public ResponseEntity<Map<String, String>> deleteAllUserNotifications(@PathVariable String userId) {
+        try {
+            List<NotificationMessage> userNotifications = notificationMessageRepository
+                .findByRecipientIdOrderByCreatedAtDesc(userId);
+            notificationMessageRepository.deleteAll(userNotifications);
+            
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "所有通知已删除");
+            response.put("deletedCount", String.valueOf(userNotifications.size()));
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "删除所有通知失败: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(error);
+        }
     }
 
     /**
