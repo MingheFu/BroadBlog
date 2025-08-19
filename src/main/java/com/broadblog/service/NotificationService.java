@@ -10,9 +10,11 @@ import com.broadblog.entity.NotificationMessage;
 public class NotificationService {
     
     private final SimpMessagingTemplate messagingTemplate;
+    private final NotificationRepository notificationRepository;
     
     public NotificationService(SimpMessagingTemplate messagingTemplate) {
         this.messagingTemplate = messagingTemplate;
+        this.notificationRepository = notificationRepository;
     }
 
     /**
@@ -22,7 +24,7 @@ public class NotificationService {
         if (!postAuthorId.equals(comment.getAuthor().getId().toString())) {
             NotificationMessage notification = new NotificationMessage(
                 "new comment",
-                comment.getAuthor().getUsername() + " comment your post《" + comment.getPost().getTitle() + "》",
+                comment.getAuthor().getUsername() + " comment your post" + comment.getPost().getTitle(),
                 postAuthorId,
                 comment.getAuthor().getId().toString(),
                 comment.getAuthor().getUsername(),
@@ -106,7 +108,7 @@ public class NotificationService {
         if (!mentionedUserId.equals(mentionerId)) {
             NotificationMessage notification = new NotificationMessage(
                 "mention notification",
-                mentionerName + " mention you in post《" + postTitle + "》",
+                mentionerName + " mention you in post" + postTitle,
                 mentionedUserId,
                 mentionerId,
                 mentionerName,
@@ -133,7 +135,7 @@ public class NotificationService {
             targetUrl,
             NotificationMessage.NotificationType.SYSTEM_NOTIFICATION
                     );
-            // 让 JPA 自动生成 ID
+            notificationRepository.save(notification);
             sendPersonalNotification(userId, notification);
     }
 
@@ -152,6 +154,7 @@ public class NotificationService {
             NotificationMessage.NotificationType.SYSTEM_NOTIFICATION
         );
         // 让 JPA 自动生成 ID
+        notificationRepository.save(notification);
         messagingTemplate.convertAndSend("/topic/notifications", notification);
     }
 

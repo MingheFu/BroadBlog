@@ -64,7 +64,7 @@ public class NotificationApiController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             Map<String, Object> error = new HashMap<>();
-            error.put("error", "获取通知失败: " + e.getMessage());
+            error.put("error", "failed to retrieve notifications: " + e.getMessage());
             return ResponseEntity.internalServerError().body(error);
         }
     }
@@ -91,11 +91,11 @@ public class NotificationApiController {
         try {
             notificationMessageRepository.markAsRead(id);
             Map<String, String> response = new HashMap<>();
-            response.put("message", "通知已标记为已读");
+            response.put("message", "Notification marked as read");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             Map<String, String> error = new HashMap<>();
-            error.put("error", "标记已读失败: " + e.getMessage());
+            error.put("error", "failed to mark notification as read: " + e.getMessage());
             return ResponseEntity.internalServerError().body(error);
         }
     }
@@ -108,11 +108,11 @@ public class NotificationApiController {
         try {
             notificationMessageRepository.markAllAsRead(userId);
             Map<String, String> response = new HashMap<>();
-            response.put("message", "所有通知已标记为已读");
+            response.put("message", "All notifications marked as read");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             Map<String, String> error = new HashMap<>();
-            error.put("error", "批量标记已读失败: " + e.getMessage());
+            error.put("error", "failed to mark all notifications as read: " + e.getMessage());
             return ResponseEntity.internalServerError().body(error);
         }
     }
@@ -125,11 +125,11 @@ public class NotificationApiController {
         try {
             notificationMessageRepository.deleteById(id);
             Map<String, String> response = new HashMap<>();
-            response.put("message", "通知已删除");
+            response.put("message", "Notification deleted");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             Map<String, String> error = new HashMap<>();
-            error.put("error", "删除通知失败: " + e.getMessage());
+            error.put("error", "failed to delete notification: " + e.getMessage());
             return ResponseEntity.internalServerError().body(error);
         }
     }
@@ -145,12 +145,12 @@ public class NotificationApiController {
             notificationMessageRepository.deleteAll(userNotifications);
             
             Map<String, String> response = new HashMap<>();
-            response.put("message", "所有通知已删除");
+            response.put("message", "All notifications deleted");
             response.put("deletedCount", String.valueOf(userNotifications.size()));
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             Map<String, String> error = new HashMap<>();
-            error.put("error", "删除所有通知失败: " + e.getMessage());
+            error.put("error", "failed to delete all notifications: " + e.getMessage());
             return ResponseEntity.internalServerError().body(error);
         }
     }
@@ -167,19 +167,19 @@ public class NotificationApiController {
             String targetUrl = request.get("targetUrl");
 
             if (userId == null || title == null || content == null) {
-                return ResponseEntity.badRequest().body(Map.of("error", "缺少必要参数"));
+                return ResponseEntity.badRequest().body(Map.of("error", "missing required parameters"));
             }
 
             notificationService.sendSystemNotification(userId, title, content, targetUrl != null ? targetUrl : "/");
             
             Map<String, String> response = new HashMap<>();
-            response.put("message", "通知发送成功");
+            response.put("message", "Notification sent successfully");
             response.put("userId", userId);
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             Map<String, String> response = new HashMap<>();
-            response.put("error", "发送通知失败: " + e.getMessage());
+            response.put("error", "failed to send notification: " + e.getMessage());
             return ResponseEntity.internalServerError().body(response);
         }
     }
@@ -195,18 +195,18 @@ public class NotificationApiController {
             String targetUrl = request.get("targetUrl");
 
             if (title == null || content == null) {
-                return ResponseEntity.badRequest().body(Map.of("error", "缺少必要参数"));
+                return ResponseEntity.badRequest().body(Map.of("error", "missing required parameters"));
             }
 
             notificationService.sendBroadcastNotification(title, content, targetUrl != null ? targetUrl : "/");
             
             Map<String, String> response = new HashMap<>();
-            response.put("message", "广播通知发送成功");
+            response.put("message", "Broadcast notification sent successfully");
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             Map<String, String> response = new HashMap<>();
-            response.put("error", "发送广播通知失败: " + e.getMessage());
+            response.put("error", "failed to send broadcast notification: " + e.getMessage());
             return ResponseEntity.internalServerError().body(response);
         }
     }
@@ -223,7 +223,7 @@ public class NotificationApiController {
             String followerAvatar = request.get("followerAvatar");
 
             if (followedUserId == null || followerId == null || followerName == null) {
-                return ResponseEntity.badRequest().body(Map.of("error", "缺少必要参数"));
+                return ResponseEntity.badRequest().body(Map.of("error", "missing required parameters"));
             }
 
             notificationService.sendNewFollowerNotification(
@@ -234,12 +234,12 @@ public class NotificationApiController {
             );
             
             Map<String, String> response = new HashMap<>();
-            response.put("message", "关注通知发送成功");
+            response.put("message", "Follow notification sent successfully");
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             Map<String, String> response = new HashMap<>();
-            response.put("error", "发送关注通知失败: " + e.getMessage());
+            response.put("error", "failed to send follow notification: " + e.getMessage());
             return ResponseEntity.internalServerError().body(response);
         }
     }
@@ -258,7 +258,7 @@ public class NotificationApiController {
             String postTitle = request.get("postTitle");
 
             if (mentionedUserId == null || mentionerId == null || mentionerName == null || postId == null || postTitle == null) {
-                return ResponseEntity.badRequest().body(Map.of("error", "缺少必要参数"));
+                return ResponseEntity.badRequest().body(Map.of("error", "missing required parameters"));
             }
 
             notificationService.sendMentionNotification(
@@ -271,12 +271,12 @@ public class NotificationApiController {
             );
             
             Map<String, String> response = new HashMap<>();
-            response.put("message", "提及通知发送成功");
+            response.put("message", "Mention notification sent successfully");
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             Map<String, String> response = new HashMap<>();
-            response.put("error", "发送提及通知失败: " + e.getMessage());
+            response.put("error", "failed to send mention notification: " + e.getMessage());
             return ResponseEntity.internalServerError().body(response);
         }
     }
@@ -296,7 +296,7 @@ public class NotificationApiController {
             String targetTitle = request.get("targetTitle");
 
             if (targetUserId == null || likerId == null || likerName == null || targetType == null || targetId == null) {
-                return ResponseEntity.badRequest().body(Map.of("error", "缺少必要参数"));
+                return ResponseEntity.badRequest().body(Map.of("error", "missing required parameters"));
             }
 
             notificationService.sendLikeNotification(
@@ -306,16 +306,16 @@ public class NotificationApiController {
                 likerAvatar != null ? likerAvatar : "/images/default-avatar.png",
                 targetType, 
                 targetId, 
-                targetTitle != null ? targetTitle : "内容"
+                targetTitle != null ? targetTitle : "content"
             );
             
             Map<String, String> response = new HashMap<>();
-            response.put("message", "点赞通知发送成功");
+            response.put("message", "Like notification sent successfully");
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             Map<String, String> response = new HashMap<>();
-            response.put("error", "发送点赞通知失败: " + e.getMessage());
+            response.put("error", "failed to send like notification: " + e.getMessage());
             return ResponseEntity.internalServerError().body(response);
         }
     }
