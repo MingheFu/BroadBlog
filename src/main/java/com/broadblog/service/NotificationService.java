@@ -5,14 +5,15 @@ import org.springframework.stereotype.Service;
 
 import com.broadblog.entity.Comment;
 import com.broadblog.entity.NotificationMessage;
+import com.broadblog.repository.NotificationMessageRepository;
 
 @Service
 public class NotificationService {
     
     private final SimpMessagingTemplate messagingTemplate;
-    private final NotificationRepository notificationRepository;
+    private final NotificationMessageRepository notificationRepository;
     
-    public NotificationService(SimpMessagingTemplate messagingTemplate) {
+    public NotificationService(SimpMessagingTemplate messagingTemplate, NotificationMessageRepository notificationRepository) {
         this.messagingTemplate = messagingTemplate;
         this.notificationRepository = notificationRepository;
     }

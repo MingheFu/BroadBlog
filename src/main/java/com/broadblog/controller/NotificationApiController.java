@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -87,6 +88,7 @@ public class NotificationApiController {
      * 标记通知为已读
      */
     @PutMapping("/{id}/read")
+    @Transactional
     public ResponseEntity<Map<String, String>> markAsRead(@PathVariable Long id) {
         try {
             notificationMessageRepository.markAsRead(id);
@@ -94,9 +96,8 @@ public class NotificationApiController {
             response.put("message", "Notification marked as read");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", "failed to mark notification as read: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(error);
+            // 重新抛出异常以确保事务回滚
+            throw new RuntimeException("Failed to mark notification as read: " + e.getMessage(), e);
         }
     }
 
@@ -104,6 +105,7 @@ public class NotificationApiController {
      * 批量标记用户的所有通知为已读
      */
     @PutMapping("/user/{userId}/read-all")
+    @Transactional
     public ResponseEntity<Map<String, String>> markAllAsRead(@PathVariable String userId) {
         try {
             notificationMessageRepository.markAllAsRead(userId);
@@ -111,9 +113,8 @@ public class NotificationApiController {
             response.put("message", "All notifications marked as read");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", "failed to mark all notifications as read: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(error);
+            // 重新抛出异常以确保事务回滚
+            throw new RuntimeException("Failed to mark all notifications as read: " + e.getMessage(), e);
         }
     }
 
@@ -121,6 +122,7 @@ public class NotificationApiController {
      * 删除单个通知
      */
     @DeleteMapping("/{id}")
+    @Transactional
     public ResponseEntity<Map<String, String>> deleteNotification(@PathVariable Long id) {
         try {
             notificationMessageRepository.deleteById(id);
@@ -128,9 +130,8 @@ public class NotificationApiController {
             response.put("message", "Notification deleted");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", "failed to delete notification: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(error);
+            // 重新抛出异常以确保事务回滚
+            throw new RuntimeException("Failed to delete notification: " + e.getMessage(), e);
         }
     }
 
@@ -138,6 +139,7 @@ public class NotificationApiController {
      * 删除用户的所有通知
      */
     @DeleteMapping("/user/{userId}")
+    @Transactional
     public ResponseEntity<Map<String, String>> deleteAllUserNotifications(@PathVariable String userId) {
         try {
             List<NotificationMessage> userNotifications = notificationMessageRepository
@@ -149,9 +151,8 @@ public class NotificationApiController {
             response.put("deletedCount", String.valueOf(userNotifications.size()));
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", "failed to delete all notifications: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(error);
+            // 重新抛出异常以确保事务回滚
+            throw new RuntimeException("Failed to delete all notifications: " + e.getMessage(), e);
         }
     }
 

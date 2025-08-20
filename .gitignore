@@ -46,3 +46,5 @@ app.log
 ES_README.md
 ARCHITECTURE_REFACTOR.md
 WEBSOCKET_README.md
+
+*.log*.gz
