@@ -5,6 +5,7 @@ import LoginView from '@/views/LoginView.vue'
 import PostsView from '@/views/PostsView.vue'
 import UsersView from '@/views/UsersView.vue'
 import CommentsView from '@/views/CommentsView.vue'
+import NotificationsView from '@/views/NotificationsView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -36,6 +37,12 @@ const router = createRouter({
       path: '/comments',
       name: 'comments',
       component: CommentsView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/notifications',
+      name: 'notifications',
+      component: NotificationsView,
       meta: { requiresAuth: true }
     },
     {

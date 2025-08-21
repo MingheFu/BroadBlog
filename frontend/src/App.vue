@@ -1,85 +1,143 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
-import HelloWorld from './components/HelloWorld.vue'
+import { onMounted } from 'vue'
+import { useUserStore } from '@/stores/user'
+import { websocketService } from '@/services/websocket'
+import NotificationBell from '@/components/NotificationBell.vue'
+
+const userStore = useUserStore()
+
+onMounted(async () => {
+  await userStore.initAuth()
+  
+  // Connect WebSocket if user is authenticated
+  if (userStore.isAuthenticated) {
+    websocketService.connect()
+  }
+})
 </script>
 
 <template>
-  <header>
-    <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
+  <div id="app">
+    <el-container>
+      <el-header class="app-header">
+        <div class="header-content">
+          <div class="logo-section">
+            <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="40" height="40" />
+            <h1 class="app-title">BroadBlog</h1>
+          </div>
 
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
+          <nav class="main-nav">
+            <RouterLink to="/" class="nav-link">Home</RouterLink>
+            <RouterLink to="/posts" class="nav-link">Posts</RouterLink>
+            <RouterLink to="/comments" class="nav-link">Comments</RouterLink>
+            <RouterLink to="/notifications" class="nav-link">Notifications</RouterLink>
+            <RouterLink v-if="userStore.isAdmin()" to="/users" class="nav-link">Users</RouterLink>
+            <RouterLink v-if="userStore.isAdmin()" to="/admin" class="nav-link">Admin</RouterLink>
+          </nav>
 
-      <nav>
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/about">About</RouterLink>
-      </nav>
-    </div>
-  </header>
+          <div class="user-section">
+            <NotificationBell v-if="userStore.isAuthenticated" />
+            
+            <div v-if="userStore.isAuthenticated" class="user-info">
+              <span class="username">{{ userStore.user?.username }}</span>
+              <el-button type="text" @click="userStore.logout()">Logout</el-button>
+            </div>
+            
+            <RouterLink v-else to="/login" class="nav-link">Login</RouterLink>
+          </div>
+        </div>
+      </el-header>
 
-  <RouterView />
+      <el-main class="app-main">
+        <RouterView />
+      </el-main>
+    </el-container>
+  </div>
 </template>
 
 <style scoped>
-header {
-  line-height: 1.5;
-  max-height: 100vh;
+#app {
+  min-height: 100vh;
+}
+
+.app-header {
+  background-color: #fff;
+  border-bottom: 1px solid #e4e7ed;
+  padding: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+  padding: 0 20px;
+}
+
+.logo-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .logo {
   display: block;
-  margin: 0 auto 2rem;
 }
 
-nav {
-  width: 100%;
-  font-size: 12px;
-  text-align: center;
-  margin-top: 2rem;
+.app-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: #409eff;
 }
 
-nav a.router-link-exact-active {
-  color: var(--color-text);
+.main-nav {
+  display: flex;
+  align-items: center;
+  gap: 24px;
 }
 
-nav a.router-link-exact-active:hover {
-  background-color: transparent;
+.nav-link {
+  text-decoration: none;
+  color: #606266;
+  font-weight: 500;
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: all 0.3s;
 }
 
-nav a {
-  display: inline-block;
-  padding: 0 1rem;
-  border-left: 1px solid var(--color-border);
+.nav-link:hover {
+  color: #409eff;
+  background-color: #f0f8ff;
 }
 
-nav a:first-of-type {
-  border: 0;
+.nav-link.router-link-active {
+  color: #409eff;
+  background-color: #f0f8ff;
 }
 
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
+.user-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
 
-  .logo {
-    margin: 0 2rem 0 0;
-  }
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
+.username {
+  font-weight: 500;
+  color: #333;
+}
 
-  nav {
-    text-align: left;
-    margin-left: -1rem;
-    font-size: 1rem;
-
-    padding: 1rem 0;
-    margin-top: 1rem;
-  }
+.app-main {
+  background-color: #f5f5f5;
+  min-height: calc(100vh - 60px);
+  padding: 20px;
 }
 </style>

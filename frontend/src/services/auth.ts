@@ -37,7 +37,7 @@ export const authService = {
   },
 
   async register(userData: RegisterRequest): Promise<AuthResponse> {
-    const response = await api.post('/auth/register', userData)
+    const response = await api.post('/users/register', userData)
     const data = response.data
     localStorage.setItem('token', data.token)
     if (data.refreshToken) {
@@ -61,5 +61,10 @@ export const authService = {
 
   isAuthenticated(): boolean {
     return !!this.getToken()
+  },
+
+  async getCurrentUser(): Promise<AuthResponse> {
+    const response = await api.get('/auth/me')
+    return response.data
   }
 } 

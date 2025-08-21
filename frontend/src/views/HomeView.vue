@@ -98,6 +98,7 @@ onMounted(() => {
             <el-menu
               mode="horizontal"
               :default-active="activeIndex"
+              :ellipsis="false"
               @select="handleSelect"
             >
               <el-menu-item index="posts">Post Management</el-menu-item>
@@ -139,18 +140,18 @@ onMounted(() => {
           <el-card>
             <template #header>
               <div class="welcome-header">
-                <h3>Welcome to BroadBlog Management System</h3>
+                <h3>Welcome to BroadBlog</h3>
                 <p v-if="userStore.isAdmin()" class="role-badge admin">Administrator</p>
                 <p v-else class="role-badge user">Regular User</p>
               </div>
             </template>
             <div class="welcome-content">
-              <p>This is a full-stack blog management system based on Spring Boot + Vue.js</p>
+              <p>Where voices turn into communities</p>
               <p v-if="userStore.isAdmin()">
-                As an administrator, you can manage all posts, users, comments, and tags.
+                Welcome to the admin panel
               </p>
               <p v-else>
-                As a regular user, you can manage your own posts and comments.
+                For creaters and storytellers
               </p>
             </div>
           </el-card>

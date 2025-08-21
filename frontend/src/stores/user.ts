@@ -15,12 +15,20 @@ export const useUserStore = defineStore('user', () => {
   const isAuthenticated = ref(false)
 
   // Initialize from localStorage
-  const initAuth = () => {
+  const initAuth = async () => {
     const storedToken = authService.getToken()
     if (storedToken) {
       token.value = storedToken
       isAuthenticated.value = true
-      // TODO: Fetch user info from backend
+      // Fetch user info from backend
+      try {
+        const response = await authService.getCurrentUser()
+        user.value = response.user
+      } catch (error) {
+        console.error('Failed to fetch user info:', error)
+        // Token might be invalid, clear it
+        logout()
+      }
     }
   }
 

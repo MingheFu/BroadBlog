@@ -91,6 +91,11 @@ public class NotificationApiController {
     @Transactional
     public ResponseEntity<Map<String, String>> markAsRead(@PathVariable Long id) {
         try {
+            // 检查通知是否存在
+            if (!notificationMessageRepository.existsById(id)) {
+                throw new RuntimeException("Notification not found");
+            }
+            
             notificationMessageRepository.markAsRead(id);
             Map<String, String> response = new HashMap<>();
             response.put("message", "Notification marked as read");
@@ -113,7 +118,6 @@ public class NotificationApiController {
             response.put("message", "All notifications marked as read");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            // 重新抛出异常以确保事务回滚
             throw new RuntimeException("Failed to mark all notifications as read: " + e.getMessage(), e);
         }
     }
@@ -125,12 +129,15 @@ public class NotificationApiController {
     @Transactional
     public ResponseEntity<Map<String, String>> deleteNotification(@PathVariable Long id) {
         try {
+            if (!notificationMessageRepository.existsById(id)) {
+                throw new RuntimeException("Notification not found");
+            }
+            
             notificationMessageRepository.deleteById(id);
             Map<String, String> response = new HashMap<>();
             response.put("message", "Notification deleted");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            // 重新抛出异常以确保事务回滚
             throw new RuntimeException("Failed to delete notification: " + e.getMessage(), e);
         }
     }
@@ -151,7 +158,6 @@ public class NotificationApiController {
             response.put("deletedCount", String.valueOf(userNotifications.size()));
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            // 重新抛出异常以确保事务回滚
             throw new RuntimeException("Failed to delete all notifications: " + e.getMessage(), e);
         }
     }
